@@ -1,0 +1,13 @@
+# 统一换行，避免 Windows / macOS 协作时整文件 diff
+* text=auto
+
+# index.html 按 Windows 习惯检出为 CRLF（本地编辑习惯），仓库内仍按 LF 存储
+*.html    text eol=crlf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+# 图片按二进制处理，不做换行转换
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
