@@ -11,7 +11,7 @@ name: Release
 #   "GitHub renames asset filenames that have special characters,
 #    non-alphanumeric characters, and leading or trailing periods."
 #   空格和中文都会被替换成「.」，所以附件名里存不下中文。
-#   做法：① 直接给一个 .html（改写成点点名，双击即用）
+#   做法：① 直接给一个 .html（附件名被改写成点点名，下载后双击即用）
 #         ② 再给一个 .zip，解压后里面的文件名与正式版名称完全一致
 on:
   push:
@@ -22,13 +22,14 @@ on:
         description: "要发布的 tag（必须已存在，例如 v1.0.0）"
         required: true
 
-# 创建 Release 与上传附件需要写权限
+# 创建 Release、上传/删除附件都需要写权限
 permissions:
   contents: write
 
 env:
   ASSET: "Fretboard Trainer 指板训练器正式版V1.html"
   ASSET_ZIP: "Fretboard Trainer 指板训练器正式版V1.zip"
+  WANT: "2"
 
 jobs:
   release:
@@ -74,8 +75,13 @@ jobs:
           fi
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG 已存在 -> 补传/覆盖附件"
-            gh release upload "$TAG" "$ASSET" "$ASSET_ZIP" --clobber
+            echo "Release $TAG 已存在 -> 清掉旧附件后重新上传"
+            RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .id)
+            for aid in $(gh api "repos/${GITHUB_REPOSITORY}/releases/${RID}/assets" --jq '.[].id'); do
+              echo "  删除旧附件 id=$aid"
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${RID}/assets/${aid}"
+            done
+            gh release upload "$TAG" "$ASSET" "$ASSET_ZIP"
           else
             echo "Release $TAG 不存在 -> 新建"
             gh release create "$TAG" "$ASSET" "$ASSET_ZIP" \
@@ -83,5 +89,17 @@ jobs:
               "${NOTES_ARG[@]}"
           fi
 
-          echo "--- 最终附件 ---"
-          gh release view "$TAG" --json tagName,name,assets
+          echo "--- 实际附件 ---"
+          gh release view "$TAG" --json assets --jq '.assets[] | "  \(.name)  \(.size) bytes  \(.state)"' | tee /tmp/assets.txt
+
+          N=$(gh release view "$TAG" --json assets --jq '.assets | length')
+          NAMES=$(gh release view "$TAG" --json assets --jq '[.assets[].name] | join(" | ")')
+          echo "### Release $TAG 附件（$N 个）" >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/    /' /tmp/assets.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo "::notice title=Release 附件 $N 个::$NAMES"
+
+          if [ "$N" -lt "$WANT" ]; then
+            echo "::error title=附件数量不足::期望 $WANT 个，实际 $N 个（$NAMES）"
+            exit 1
+          fi
+          echo "附件数量校验通过：$N 个"
