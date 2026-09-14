@@ -1,11 +1,18 @@
 name: Release
 
-# 打版本 tag（v1.0.0 / v1.1.0 …）时自动创建 Release，
-# 并把应用以「正式版文件名」作为附件传上去。
+# 打版本 tag（v1.0.0 / v1.1.0 …）时自动创建 Release 并上传发布产物。
 #
-# 为什么要走工作流而不是本机手动传：
+# 为什么走工作流而不是本机手动传：
 #   创建 Release / 上传附件只能用 GitHub API，需要个人凭据；
-#   而工作流里的 GITHUB_TOKEN 是仓库自带的，不需要任何人提供 token。
+#   工作流里的 GITHUB_TOKEN 是仓库自带的，不需要任何人提供 token。
+#
+# 关于文件名（重要）：
+#   GitHub 会改写附件名 —— 官方文档原话是
+#   "GitHub renames asset filenames that have special characters,
+#    non-alphanumeric characters, and leading or trailing periods."
+#   空格和中文都会被替换成「.」，所以附件名里存不下中文。
+#   做法：① 直接给一个 .html（改写成点点名，双击即用）
+#         ② 再给一个 .zip，解压后里面的文件名与正式版名称完全一致
 on:
   push:
     tags: ["v*"]
@@ -19,6 +26,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ASSET: "Fretboard Trainer 指板训练器正式版V1.html"
+  ASSET_ZIP: "Fretboard Trainer 指板训练器正式版V1.zip"
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -27,32 +38,50 @@ jobs:
         uses: actions/checkout@v4
 
       # 仓库里的 index.html 保持原名（GitHub Pages 依赖它），
-      # 发布附件另存一份正式版文件名。两份内容完全一致。
-      - name: 准备正式版附件
+      # 发布产物另存一份正式版文件名。两份内容完全一致。
+      - name: 准备发布产物
         run: |
           set -e
-          ASSET="Fretboard Trainer 指板训练器正式版V1.html"
           cp index.html "$ASSET"
-          echo "附件：$ASSET"
-          ls -l "$ASSET" index.html
-          sha256sum index.html "$ASSET"
-          cmp index.html "$ASSET" && echo "逐字节一致 ✔"
+          python3 - <<'PY'
+          import hashlib, os, zipfile
 
-      - name: 创建 Release
+          name = "Fretboard Trainer 指板训练器正式版V1.html"
+          zipname = "Fretboard Trainer 指板训练器正式版V1.zip"
+
+          # arcname 用原文件名 -> 解压后拿到的就是正式版文件名
+          with zipfile.ZipFile(zipname, "w", zipfile.ZIP_DEFLATED) as z:
+              z.write(name, arcname=name)
+
+          print("zip 内条目名 :", zipfile.ZipFile(zipname).namelist())
+          for f in (name, zipname, "index.html"):
+              print("  %-46s %8d bytes" % (f, os.path.getsize(f)))
+          print("html sha256 :", hashlib.sha256(open(name, "rb").read()).hexdigest())
+          PY
+          cmp index.html "$ASSET" && echo "附件与 index.html 逐字节一致 ✔"
+
+      - name: 发布 / 补传附件
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           set -e
-          ASSET="Fretboard Trainer 指板训练器正式版V1.html"
           NOTES=".github/release-notes/${TAG}.md"
           if [ -f "$NOTES" ]; then
             NOTES_ARG=("--notes-file" "$NOTES")
           else
             NOTES_ARG=("--generate-notes")
           fi
-          gh release create "$TAG" "$ASSET" \
-            --title "$TAG · Fretboard Trainer 指板训练器 正式版 V1" \
-            "${NOTES_ARG[@]}"
-          echo "---"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG 已存在 -> 补传/覆盖附件"
+            gh release upload "$TAG" "$ASSET" "$ASSET_ZIP" --clobber
+          else
+            echo "Release $TAG 不存在 -> 新建"
+            gh release create "$TAG" "$ASSET" "$ASSET_ZIP" \
+              --title "$TAG · Fretboard Trainer 指板训练器 正式版 V1" \
+              "${NOTES_ARG[@]}"
+          fi
+
+          echo "--- 最终附件 ---"
           gh release view "$TAG" --json tagName,name,assets
