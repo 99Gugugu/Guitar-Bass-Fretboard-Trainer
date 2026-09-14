@@ -13,6 +13,11 @@ name: Release
 #   空格和中文都会被替换成「.」，所以附件名里存不下中文。
 #   做法：① 直接给一个 .html（附件名被改写成点点名，下载后双击即用）
 #         ② 再给一个 .zip，解压后里面的文件名与正式版名称完全一致
+#
+# 为什么不是「存在就补传、不存在就新建」：
+#   删过一次 tag，GitHub 那边留下了不可见的残留 Release 对象 ——
+#   gh release view 说「没有」，gh release create 却失败。
+#   所以这里改成：按 tag 名列出所有 Release（含 draft）逐个删掉，再从零创建。
 on:
   push:
     tags: ["v*"]
@@ -22,7 +27,7 @@ on:
         description: "要发布的 tag（必须已存在，例如 v1.0.0）"
         required: true
 
-# 创建 Release、上传/删除附件都需要写权限
+# 创建 / 删除 Release 与上传 / 删除附件都需要写权限
 permissions:
   contents: write
 
@@ -61,45 +66,64 @@ jobs:
           PY
           cmp index.html "$ASSET" && echo "附件与 index.html 逐字节一致 ✔"
 
-      - name: 发布 / 补传附件
+      - name: 发布 Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          set -e
+          set -u
+          LOG=/tmp/rel.log
+          : > "$LOG"
+
+          # 每条命令都记日志；失败时把日志尾部写成 ::error:: 注解，
+          # 这样不用 token 也能在 Actions 运行页上读到失败原因。
+          run() {
+            echo "+ $*" >> "$LOG"
+            out=$("$@" 2>>"$LOG")
+            rc=$?
+            printf '%s\n' "$out" >> "$LOG"
+            printf '%s\n' "$out"
+            if [ "$rc" -ne 0 ]; then
+              echo "!! 失败 rc=$rc : $*"
+              echo "::error title=gh 命令失败 rc=$rc 命令=$* 输出尾部=$(tail -c 1000 "$LOG" | tr '\n' '~')"
+              exit "$rc"
+            fi
+            return 0
+          }
+
+          TITLE="${TAG} · Fretboard Trainer 指板训练器 正式版 V1"
           NOTES=".github/release-notes/${TAG}.md"
+
+          # 1) 清掉同一 tag 名下的任何 Release（含不可见的残留 / draft）
+          IDS=$(run gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+                  --jq "[.[] | select(.tag_name == \"${TAG}\") | .id] | join(\" \")")
+          echo "同名 Release id 列表: [${IDS}]"
+          for rid in $IDS; do
+            run gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${rid}"
+          done
+          # 兜底：再按 tag 端点试删一次，失败无所谓
+          gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" >>"$LOG" 2>&1 \
+            && echo "  (tag 端点也删掉了一个)" || echo "  (tag 端点无残留)"
+
+          # 2) 从零创建，并把两个产物作为附件传上去
           if [ -f "$NOTES" ]; then
-            NOTES_ARG=("--notes-file" "$NOTES")
+            run gh release create "$TAG" "$ASSET" "$ASSET_ZIP" --title "$TITLE" --notes-file "$NOTES"
           else
-            NOTES_ARG=("--generate-notes")
+            run gh release create "$TAG" "$ASSET" "$ASSET_ZIP" --title "$TITLE" --generate-notes
           fi
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG 已存在 -> 清掉旧附件后重新上传"
-            RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .id)
-            for aid in $(gh api "repos/${GITHUB_REPOSITORY}/releases/${RID}/assets" --jq '.[].id'); do
-              echo "  删除旧附件 id=$aid"
-              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${RID}/assets/${aid}"
-            done
-            gh release upload "$TAG" "$ASSET" "$ASSET_ZIP"
-          else
-            echo "Release $TAG 不存在 -> 新建"
-            gh release create "$TAG" "$ASSET" "$ASSET_ZIP" \
-              --title "$TAG · Fretboard Trainer 指板训练器 正式版 V1" \
-              "${NOTES_ARG[@]}"
-          fi
-
-          echo "--- 实际附件 ---"
-          gh release view "$TAG" --json assets --jq '.assets[] | "  \(.name)  \(.size) bytes  \(.state)"' | tee /tmp/assets.txt
-
-          N=$(gh release view "$TAG" --json assets --jq '.assets | length')
-          NAMES=$(gh release view "$TAG" --json assets --jq '[.assets[].name] | join(" | ")')
-          echo "### Release $TAG 附件（$N 个）" >> "$GITHUB_STEP_SUMMARY"
-          sed 's/^/    /' /tmp/assets.txt >> "$GITHUB_STEP_SUMMARY" || true
-          echo "::notice title=Release 附件 $N 个::$NAMES"
+          # 3) 回读断言：附件不全就报错，不再静默通过
+          N=$(run gh release view "$TAG" --json assets --jq '.assets | length')
+          NAMES=$(run gh release view "$TAG" --json assets --jq '[.assets[].name] | join(" | ")')
+          SIZES=$(run gh release view "$TAG" --json assets --jq '[.assets[] | "\(.name)=\(.size)"] | join("  ")')
+          echo "### Release ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 附件数：${N}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ${NAMES}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ${SIZES}" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Release 附件 ${N} 个::${SIZES}"
 
           if [ "$N" -lt "$WANT" ]; then
-            echo "::error title=附件数量不足::期望 $WANT 个，实际 $N 个（$NAMES）"
+            echo "::error title=附件数量不足::期望 ${WANT} 个，实际 ${N} 个（${NAMES}）"
             exit 1
           fi
-          echo "附件数量校验通过：$N 个"
+          echo "附件数量校验通过：${N} 个"
