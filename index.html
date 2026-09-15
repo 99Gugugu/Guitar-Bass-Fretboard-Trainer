@@ -851,7 +851,7 @@ body{padding-bottom:74px}
     <div class="card" data-page-node-id="ArpCard1">
       <div class="card-t">
         <h3>琶音探索 · CAGED 五把位</h3>
-        <span class="hint">同一个和弦琶音在指板上的 5 个 CAGED 把位。实心＝本型指型，白心＝根音；空心圈＝相邻把位里同一个琶音的音，练换把时看它就知道手往哪边走</span>
+        <span class="hint">同一个和弦琶音在指板上的 5 个 CAGED 把位。实心＝本型指型，白心＝根音；空心圈＝邻近把位里同一个琶音的内音（虚线＝根音左侧 5 品内，实线＝根音右侧 5 品内），练换把时看它就知道手往哪边走</span>
       </div>
       <div class="row" style="max-width:720px;margin-bottom:12px">
         <div class="field" style="margin:0">
@@ -870,8 +870,10 @@ body{padding-bottom:74px}
       <div class="row" style="margin-bottom:14px">
         <button class="btn primary" id="arpPlayBtn">▶ 播放琶音</button>
         <button class="btn" id="arpPlayAllBtn">▶ 五个把位连播</button>
-        <button type="button" class="chip hero tgl" id="arpGhostBtn"
-          title="点击开关：开启时把相邻把位的可用音画成空心圈，方便练「这一把接下一把」"></button>
+        <button type="button" class="chip hero tgl" id="arpGhostLBtn"
+          title="点击开关：展开「左邻近把位」——以根音位置为基准、向左 5 品范围内的同一个琶音音（虚线空心圈）"></button>
+        <button type="button" class="chip hero tgl" id="arpGhostRBtn"
+          title="点击开关：展开「右邻近把位」——以根音位置为基准、向右 5 品范围内的同一个琶音音（实线空心圈）"></button>
         <span class="chip hero" id="arpInfo"></span>
       </div>
       <div class="arp-grid" id="arpGrid"></div>
@@ -1196,6 +1198,58 @@ const DEGCOLOR = [
   '#0891b2', // b7
   '#0ea5e9'  // 7
 ];
+
+/* ---- 和弦构成音的音级名 ---------------------------------------------
+   这跟「音阶音级」（DEG / NUM）不是一回事，凡是显示「某个和弦由哪些音级构成」
+   的地方都走这里，别直接查表 —— 那两张表是**音阶口径**的，一个半音数只配一个
+   名字；而和弦里同一个半音数在不同和弦里担任的功能不一样，叫错了整个和弦的
+   性质就没了（音名那边 spellChord 是另一套，两边必须说同一件事）。
+   判名的办法就一条：**先看这个音在和弦里处于哪一层，再决定叫它几度**。
+     · 和弦里有没有三音（3 或 4 半音）—— 决定 2 / 5 / 9 半音是挂留音、延伸音还是三音；
+     · 纯五度（7 半音）在不在 —— 决定 6 半音是 b5 还是 #11、8 半音是 #5 还是 b13。
+   于是「同一个半音数、不同和弦里叫法不同」的几处自然就分开了：
+     8 半音  增三 aug / 增大七 maj7#5 / 属七升五 7#5 → #5（把五音升上去，不是小六度）
+             属七降十三 7b13（五音仍在）→ b13
+     9 半音  减七 dim7 的七音 → bb7；十三和弦的十三音 → 13；其余（六和弦族）→ 6
+     2 半音  add9 / 九和弦族 → 9（叠在三音之上的九音）；挂二 sus2 → 2
+     5 半音  挂四 sus4 / 7sus4 → 4；含三音的和弦里 → 11
+   刻意不动的：10 半音永远是 b7（小七 / 属七 / 半减七一个写法）、11 半音永远是 7、
+   纯五度永远是 5、小三度永远是 b3 —— 这几个没有等音改写的余地。
+   rootAsR：根音写 'R'（琶音 / 指板 / 声部）还是 '1'（CAGED 卡片）。 */
+function isDim7Iv(iv){
+  const s = Array.from(new Set(iv.map(i => ((i % 12) + 12) % 12))).sort((a, b) => a - b);
+  return s.join(',') === '0,3,6,9';
+}
+function chordToneDeg(iv, semi, rootAsR){
+  const p = ((semi % 12) + 12) % 12;
+  const set = Array.from(new Set(iv.map(i => ((i % 12) + 12) % 12)));
+  /* 不算是和弦构成音的，一律按音阶口径回表 —— 别硬塞一个和弦功能名给它。
+     真会撞上的只有斜杠和弦的转位低音（G/F、Cm7/F 这种，低音本来就不在和弦里），
+     那时该标的是低音记号 B，而不是「十一音 / 升十一音」。 */
+  if (set.indexOf(p) < 0) return rootAsR ? DEG[p] : NUM[p];
+  const has = x => set.indexOf(x) >= 0;
+  const third = has(3) || has(4);              /* 三音在位 → 才是有明确大小调的和弦 */
+  const fifth = has(7);                        /* 纯五度在位 → 6 / 8 半音算变化音而不是换了个音 */
+  switch (p){
+    case 1:  return third ? 'b9' : 'b2';
+    case 2:  return third ? '9' : '2';         /* 九音 / 挂二度 */
+    case 3:  return has(4) ? '#9' : 'b3';      /* 已经有大三度 → 这是升九音 */
+    case 4:  return has(3) ? '11' : '3';       /* 已经有小三度 → 这是十一音 */
+    case 5:  return third ? '11' : '4';        /* 挂四度 / 十一音 */
+    case 6:  return fifth ? '#11' : 'b5';      /* 纯五度还在 → 这是升十一音 */
+    case 8:  return third ? (fifth ? (has(10) ? 'b13' : 'b6') : '#5') : 'b6';
+    case 9:  return isDim7Iv(iv) ? 'bb7' : ((third && has(2)) ? '13' : '6');
+    default: break;
+  }
+  return rootAsR ? DEG[p] : NUM[p];
+}
+/* 音级名 → 半音数（着色用）。等音改写过的名字都要指回同一个色位：
+   #5 与 b6、9 与 2、13 与 6、bb7 与 6 是同一个音高，图上就用同一个颜色。 */
+const DEG_SEMI = {
+  '1':0, 'R':0, 'b2':1, 'b9':1, '2':2, '9':2, 'b3':3, '#2':3, '#9':3, '3':4,
+  '4':5, '11':5, 'b5':6, '#4':6, '#11':6, '5':7, '#5':8, 'b6':8, 'b13':8,
+  '6':9, 'bb7':9, '13':9, 'b7':10, '7':11
+};
 
 /* inst 决定「用哪套 CAGED 指型骨架」：
      g6 = 6 弦吉他（CAGED 和声教材·吉他版实测指型）
@@ -1868,7 +1922,7 @@ const SCALES = [
   { id:'arp_7sus4', g:'arp', cn:'属七 sus4 琶音', en:'7sus4 Arpeggio', iv:[0,5,7,10], d:'R-4-5-b7。避免三音，听感开放。', u:'7sus4 和弦' },
   { id:'arp_maj6', g:'arp', cn:'大六琶音', en:'Major 6 Arpeggio', iv:[0,4,7,9], d:'R-3-5-6。比大七柔和，常与五声音阶互换使用。', u:'6 和弦、大调五声' },
   { id:'arp_sus2', g:'arp', cn:'sus2 琶音', en:'Sus2 Arpeggio', iv:[0,2,7], d:'R-2-5。没有三音，悬置感，常用于现代流行与后摇。', u:'sus2 和弦' },
-  { id:'arp_add9', g:'arp', cn:'加九琶音', en:'Add9 Arpeggio', iv:[0,2,4,7], d:'R-2-3-5。大三和弦加 9 音，明亮开阔。', u:'add9 和弦' },
+  { id:'arp_add9', g:'arp', cn:'加九琶音', en:'Add9 Arpeggio', iv:[0,2,4,7], d:'R-9-3-5。大三和弦加 9 音，明亮开阔。', u:'add9 和弦' },
   { id:'arp_maj7s5', g:'arp', cn:'增大七琶音', en:'Maj7#5 Arpeggio', iv:[0,4,8,11], d:'R-3-#5-7。增音阶的核心琶音，上行解决力强。', u:'Maj7#5 和弦' },
   { id:'arp_dom7s5', g:'arp', cn:'属七升五琶音', en:'7#5 Arpeggio', iv:[0,4,8,10], d:'R-3-#5-b7。属和弦的张力升级版，常配全音阶。', u:'7#5 和弦、全音阶' },
   { id:'arp_dom7b5', g:'arp', cn:'属七降五琶音', en:'7b5 Arpeggio', iv:[0,4,6,10], d:'R-3-b5-b7。变化属和弦的基础材料。', u:'7b5 和弦、变化音阶' }
@@ -2943,7 +2997,7 @@ const CHORD_NAME = {
 function chordSymbol(cv){
   const k = cv.join(',');
   if (CHORD_NAME[k] !== undefined) return CHORD_NAME[k];
-  return ' ' + cv.map(i => DEG[i]).join('·');
+  return ' ' + cv.map(i => chordToneDeg(cv, i, true)).join('·');
 }
 
 (function buildScales(){
@@ -3220,37 +3274,99 @@ const CAGED_GUITAR_KEYS = { maj:'major', min:'minor', dom7:'7',
                             maj7:'maj7', min7:'min7', m7b5:'m7b5' };
 
 /* 原书没直接给指型的和弦性质：拿该调弦下「大三和弦」的五个 CAGED 型当骨架，
-   每根弦挑「离骨架槽位最近」的那个和弦音。
+   每根弦挑一个和弦音。
    因为挑的一定是和弦音，所以不会跑音；但它是机械推导的结果，不一定顺手，
    页面上会标注为「推导」而不是「原书实测」。
-   ⚠ 候选音必须凑够 ±24 半音（5 个八度）：高音弦上「骨架槽位相对根音的半音数」
-   能到 24 以上（E 型 1 弦 = 6 弦根音 +24），只列 ±12 的话最近的和弦音会被算成
+
+   ⚠ 不能「每根弦各自挑离骨架槽位最近的那个和弦音」—— 旧版就是这么写的，会漏音：
+     骨架槽位上原本全是 1 / 3 / 5，各挑各的必然整排原地不动，
+     和弦里多出来的音（六和弦的 6、九和弦的 2、小大七的 7、减七的 6 …）
+     一个都进不了图 —— 选「大六和弦」画出来跟大三和弦逐格一模一样。
+     现在改成**全局分配 + 分级保底**：一次决定六根弦各自落在哪个和弦音上。
+     目标函数里「缺特征音」的代价（100）远高于「手指多挪一品」（1），
+     于是六音一定会出现在图上，而重复的根音 / 五音该让就让 ——
+     结果正好落回 022120 / x02222 / xx0202 这些标准的六和弦手型：
+       E6 型 6 弦按 0 2 2 1 2 0、A6 型 x 0 2 2 2 2、
+       D6 型 x x 0 2 0 2、G6 型 3 2 0 0 0 0、C6 型 x 3 2 2 1 0。
+     枚举量 = 槽位数 ^ (音级数+1) ≤ 6^6，仍是毫秒级。
+   ⚠ 候选八度要凑够 ±24 半音（5 个八度）：高音弦上「骨架槽位相对根音的半音数」
+   能到 24 以上（E 型 1 弦 = 6 弦根音 +24），只看 ±12 的话最近的和弦音会被算成
    差 6 个半音，指型就会被扯开 6~8 品，直接没法按。 */
+const deriveFormCache = {};
 function deriveFormsFrom(mid, iv, base){
-  return deriveFromSkeleton(cagedSkeleton(base), mid, iv);
+  const ck = instOf() + '|' + tuning().id + '|' + base + '|' + iv.join(',');
+  if (deriveFormCache[ck]) return deriveFormCache[ck];
+  deriveFormCache[ck] = deriveFromSkeleton(cagedSkeleton(base), mid, iv);
+  return deriveFormCache[ck];
 }
 function deriveFromSkeleton(skel, mid, iv){
   const out = {};
+  const BASE = [0, 4, 7];                     /* 大三和弦音级 = 「基础音」 */
+  const TOL  = 5;                             /* 单根弦相对骨架最多让手挪几品 */
+  const ivs  = Array.from(new Set(iv.map(i => ((i % 12) + 12) % 12))).sort((a, b) => a - b);
+  const isChar = ivs.map(p => BASE.indexOf(p) < 0);   /* 不在大三和弦里的 = 特征音，必须保住 */
+  /* 缺音的代价分档：特征音 >> 根音 > 三音 > 五音。
+     根音要单列一档，是因为 D 型只有 4 根弦的槽位，五音的九和弦（9 / m9 / maj9）
+     本来就塞不下五个音 —— 这时该舍的必须是五音，绝不能舍根音或三音：
+     丢根音则这个型认不出是哪个型，丢三音则分不出大 / 小调。
+     三音那一档要压得住「手少挪几品」的诱惑（实测 D 型 maj9：保三音要挪 6 品、
+     丢三音只挪 3 品），所以给得比五音高得多。 */
+  const missPen = p => isChar[p] ? 100 : (ivs[p] === 0 ? 20 : (ivs[p] === 4 ? 14 : 6));
   CAGED_ORDER.forEach(k => {
     const fm = skel[k];
     if (!fm) return;
     const base = mid[fm.anchor];
-    const cand = [];
-    iv.forEach(i => { cand.push(i, i + 12, i - 12, i + 24, i - 24); });
-    const off = [], deg = [];
+    const idx = [], rel = [];
     for (let s = 0; s < mid.length; s++){
-      if (fm.off[s] === null || fm.off[s] === undefined){ off.push(null); deg.push(null); continue; }
-      const rel = (mid[s] - base) + fm.off[s];            /* 该槽位相对根音的半音数 */
-      let best = null, bd = 1e9;
-      cand.forEach(c => {
-        const nf = fm.off[s] + (c - rel);
-        if (nf < -6 || nf > 12) return;                   /* 别跑出把位窗 */
-        const d = Math.abs(c - rel);
-        if (d < bd - 1e-9){ bd = d; best = c; }
-      });
-      if (best === null){ off.push(null); deg.push(null); continue; }
-      off.push(Math.round(fm.off[s] + (best - rel)));
-      deg.push(NUM[((best % 12) + 12) % 12]);
+      const o = fm.off[s];
+      if (o === null || o === undefined) continue;
+      idx.push(s);
+      rel.push((mid[s] - base) + o);          /* 该槽位在骨架里的音高（相对根音的半音数） */
+    }
+    const n = idx.length, M = ivs.length;
+    if (!n || !M) return;
+    /* 候选表：槽位 i 用音级 p 时取位移最小的那个八度，超 TOL 记 null */
+    const cand = rel.map(r => ivs.map(p => {
+      let best = null;
+      for (let o2 = -2; o2 <= 2; o2++){
+        const t = p + 12 * o2, d = t - r;
+        if (Math.abs(d) > TOL) continue;
+        if (best === null || Math.abs(d) < Math.abs(best.d)) best = { t: t, d: d };
+      }
+      return best;
+    }));
+    /* 枚举：每个槽位选哪个音级（下标 M = 这根弦不弹） */
+    let bestScore = Infinity, bestPick = null;
+    const pick = new Array(n).fill(0);
+    const total = Math.pow(M + 1, n);
+    for (let code = 0; code < total; code++){
+      let c = code, allOff = true;
+      for (let i = 0; i < n; i++){ pick[i] = c % (M + 1); c = (c / (M + 1)) | 0; if (pick[i] !== M) allOff = false; }
+      if (allOff) continue;                   /* 整张图一个音都不弹，无意义 */
+      let move = 0, silent = 0, miss = 0, lo = 1e9, hi = -1e9, ok = true;
+      const cov = new Array(M).fill(false);
+      for (let i = 0; i < n; i++){
+        if (pick[i] === M){ silent++; continue; }
+        const cd = cand[i][pick[i]];
+        if (!cd){ ok = false; break; }
+        const op = fm.off[idx[i]] + cd.d;     /* 该弦最终相对锚点弦的偏移 */
+        move += Math.abs(cd.d);
+        if (op < lo) lo = op;
+        if (op > hi) hi = op;
+        cov[pick[i]] = true;
+      }
+      if (!ok) continue;
+      for (let p = 0; p < M; p++){ if (!cov[p]) miss += missPen(p); }
+      const score = move + 0.4 * (hi - lo) + 3.5 * silent + miss;
+      if (score < bestScore - 1e-9){ bestScore = score; bestPick = pick.slice(); }
+    }
+    if (!bestPick) return;                    /* 极端定弦下无解 → 这个型不画 */
+    const off = new Array(mid.length).fill(null), deg = new Array(mid.length).fill(null);
+    for (let i = 0; i < n; i++){
+      if (bestPick[i] === M) continue;        /* 该弦不弹 */
+      const cd = cand[i][bestPick[i]];
+      off[idx[i]] = fm.off[idx[i]] + cd.d;
+      deg[idx[i]] = NUM[((cd.t % 12) + 12) % 12];
     }
     out[k] = { name: fm.name, anchor: fm.anchor, off: off, deg: deg, derived: true };
   });
@@ -3373,9 +3489,17 @@ const S = {
   jamScheme: 0,         /* 玩点即兴：当前查看的声部连接方案序号 */
   jamWin: 4,            /* 玩点即兴：把位窗口宽度（品） */
   jamSpan: 12,          /* 玩点即兴：搜索到第几品为止 */
-  arpGhost: true        /* 琶音探索：显示临近把位的音 */
+  arpGhost: true,       /* 琶音探索：旧版「展开邻近把位」总开关（现已拆成左右两项，只用于老存档迁移） */
+  arpGhostL: true,      /* 琶音探索：展开左邻近把位（根音位置向左 5 品内的琶音内音） */
+  arpGhostR: true       /* 琶音探索：展开右邻近把位（根音位置向右 5 品内的琶音内音） */
 };
-try { Object.assign(S, JSON.parse(localStorage.getItem(LS) || '{}')); } catch(e){}
+let _saved = {};
+try { _saved = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch(e){ _saved = {}; }
+Object.assign(S, _saved);
+/* 老存档里只有一个 arpGhost 总开关：没存过左右两项的就按它的值初始化，
+   免得升级后用户的显示偏好被无声改掉。 */
+if (_saved.arpGhostL === undefined) S.arpGhostL = S.arpGhost !== false;
+if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
 /* 状态自检：防止历史/异常数据让渲染崩溃 */
 (function sanitize(){
   const num = (v, d, lo, hi) => (typeof v === 'number' && isFinite(v))
@@ -3388,7 +3512,10 @@ try { Object.assign(S, JSON.parse(localStorage.getItem(LS) || '{}')); } catch(e)
   if (!S.rangeStart && S.rangeCount) S.rangeStart = 0;
   if (!SCALES.some(s => s.id === S.scale)) S.scale = SCALES[0].id;
   if (!TUNINGS.some(t => t.id === S.tuning)) S.tuning = TUNINGS[0].id;
-  if (!['off','3nps','4nps','313','212','2nps','caged','box'].includes(S.pattern)) S.pattern = 'off';
+  if (!['off','3nps','4nps','pentwide','313','212','2nps','caged','box'].includes(S.pattern)) S.pattern = 'off';
+  /* 宽五声只存在于大小调五声（这两条音阶的 4NPS 铺不出来，见 PATTERNS）：两个档位互相顶替 */
+  if (pentWideScale(S.scale) && S.pattern === '4nps')      S.pattern = 'pentwide';
+  if (!pentWideScale(S.scale) && S.pattern === 'pentwide') S.pattern = '4nps';
   S.arpRange = num(S.arpRange, 20, 5, 24);
   S.qKey     = num(S.qKey, 0, 0, 11);
   if (ARP_LIST.indexOf(S.arp) < 0) S.arp = ARP_LIST[9];
@@ -3400,6 +3527,8 @@ try { Object.assign(S, JSON.parse(localStorage.getItem(LS) || '{}')); } catch(e)
       && !BOOK50.some(b => b.id === S.cnProg))) S.cnProg = PROGS[0].id;
   S.cnAlt    = !!S.cnAlt;
   S.arpGhost = (S.arpGhost === undefined) ? true : !!S.arpGhost;
+  S.arpGhostL = (S.arpGhostL === undefined) ? S.arpGhost : !!S.arpGhostL;
+  S.arpGhostR = (S.arpGhostR === undefined) ? S.arpGhost : !!S.arpGhostR;
   S.fbSplit  = (S.fbSplit === undefined) ? true : !!S.fbSplit;
   if (['all','0','1','2','3','4','5','6','hi'].indexOf(S.cnLib) < 0) S.cnLib = 'all';
   S.cnLib    = String(S.cnLib);
@@ -3616,25 +3745,58 @@ function inStringGroup(s, N, g){
           Root 6 第 1 例、Root 5 第 1 例的取音，逐音都能对上。
      · 一本跨弦指型专书（概念册 / 技法谱册）
        —— 「3-1-3 Patterns from 3 Note Per String Scales」「Modal 3-1-3 Shapes」：
-          3-1-3 = 跨弦音数 3-1-3-1-3，只占 5 根弦、共 11 音。
-          每换一根弦先跳过 1 个音阶音，所以「1 音弦」弹出的正是该弦三音组的中间音
-          （C D E → 跳 F → G → 跳 A → B C D …）。原书两种起点都有：
-          起第 5 弦（低把位、用到最高一根弦）与起第 6 弦；
-          所以「起始弦」也做成可滑动的，两条都列出来。
+          3-1-3 = 跨弦音数 3-1-3-1-4，只占 5 根弦、共 12 音（**最高弦 4 音**）；
+          它最高的两个音同时落在下一个把位里 —— 换把时靠这两个音咬合。
+          原书把两种起始弦都印过（起第 5 弦 / 起第 6 弦），「起始弦」因此做成可滑动的。
        技法册里的「Extended 3-1-3 Shape Run」把同一音型
-       延长成上下行（20~23 音），骨架仍是这 11 音。 */
+       延长成上下行（20~23 音），骨架仍是这 12 音。 */
 const PATTERNS = [
   { id:'off',   cn:'不分区（整块显示）' },
-  { id:'3nps',  cn:'一弦三音 3NPS', seq:[3,3,3,3,3,3] },
-  { id:'4nps',  cn:'一弦四音 4NPS', seq:[4,4,4,4,4,4] },
-  /* skip   = 每换一根弦先跳过的音阶音数（0 = 连续推进）；
-     arp    = 取音方式：true 按「三度叠置 + 八度重复」取（琶音），省略 = 连续音阶音；
-     minStr = 这条指型允许「至少占几根弦」，决定起始弦能滑到哪（省略 = seq.length）；
-     seq.length = 这条指型占几根弦（3-1-3 占 5 根、2-1-2 占 6 根）。 */
-  { id:'313',   cn:'3-1-3 跨弦（5 弦 11 音）', seq:[3,1,3,1,3], skip:1 },
+  /* spanAll = 「按弦数铺满」（第 40 轮，用户点名 3NPS / 4NPS）：骨架只写 6 项，
+     落到七弦定弦时按 N 补长 —— 每弦取音数不变，弦数铺满 1–N 弦。
+     于是 minStr 跟着变成 N、起始弦只剩一个 → 只出一组「1–7 弦组」，
+     不再把 6 项骨架平移出「2–7 弦组 / 1–6 弦组」两组（那两组各少一根弦，
+     4 / 5 弦贝斯是「弦数不够 6 根自然截断」，与此不同，不受本字段影响）。 */
+  { id:'3nps',  cn:'一弦三音 3NPS', seq:[3,3,3,3,3,3], spanAll:true },
+  /* 4NPS 是 7 品窗的两条豁免之一（第 37 轮）：每根弦都要跑 4 个连续音阶音，最坏跨
+     6 品，7 品窗根本装不下 → winFree 让它按自然宽度铺开。 */
+  { id:'4nps',  cn:'一弦四音 4NPS', seq:[4,4,4,4,4,4], winFree:true, spanAll:true },
+  /* 宽五声（第 41 轮，用户点名）：大小调五声的 4NPS 在数学上就铺不出来 ——
+     5 音音阶、每弦 4 音 × 6 弦 = 24 音 ≈ 4.8 个八度，24 品琴颈装不下
+     （实测：大调五声全零，小调五声在 17 条定弦 × 全部音阶 × 全部指型里也只剩 2 块）。
+     于是那一档换成「合并相邻把位」的宽五声：五声把位是「每弦 2 音」，
+     相邻两个把位在每根弦上恰好共享一个边界音（本把位每弦的高音 = 右邻把位同弦的低音），
+     并起来正好每弦 3 音 —— 就是指型教程里的 3-notes-per-string 五声：
+     食指起、小指落，随音程关系取 1-3-4 / 1-2-4 / 1-2-3 三种指序。
+     骨架写「每弦 2 音」只为借 spanAll 把起始弦收成一个（见 buildBlocks 的 seq 那段）；
+     真正的铺法是「铺两个把位再取并集」，在 buildBlocks 的 wideAt 里。 */
+  { id:'pentwide', cn:'宽五声（一弦三音 · 本把位 + 右邻把位）', seq:[2,2,2,2,2,2], spanAll:true },
+  /* arp     = 取音方式：true 按「三度叠置 + 八度重复」取（琶音），省略 = 连续音阶音；
+     minStr  = 这条指型允许「至少占几根弦」，决定起始弦能滑到哪（省略 = seq.length）；
+     topAdd  = 最高弦在 seq 之上再多取几个音（省略 = 0）；
+     spanAll = true 时骨架按弦数 N 补长（第 40 轮）—— 只给「每弦取音数固定、
+               本来就该铺满全部弦」的跑句型指型（3NPS / 4NPS）用，见上面那段；
+               占弦数固定（3-1-3 / 2-1-2）与只占 3 弦的 2-1-2 基本型都不配这个字段。
+     winFree = true 时**不做 7 品窗约束**（第 37 轮）—— 只有「每弦取音数 ≥ 4」这种
+               一条弦就跑满半个把位的指型才需要它。另一条豁免是五声族音阶，
+               由音阶自己带（sc.g === 'pent'），不用在这里配。
+     seq.length = 这条指型占几根弦（3-1-3 占 5 根、2-1-2 占 6 根）。
+     —— 换弦时「起音选哪个」**不在这里配置**：第 36 轮起统一由「7 品窗 + 1 音弦偏置」（第 39 轮窗宽 6 → 7）
+        的规则在 buildBlocks 的 lay 里现算（见那段长注释）。于是 skip / topSkip /
+        preTopSkip / topSkip6 / preTopSkip6 / open 这几类手工错位字段已全部删除。 */
+  /* 3-1-3：最低弦 3 音 · 次弦 1 音 · 中弦 3 音 · 再 1 音 · 最高弦 4 音（共 12 音）。
+     topAdd=1 —— 最高弦比别的弦多取 1 个音，于是它是 4 个连续音阶音；
+     它最高的两个音同时落在下一个把位里，换把时靠这两个音咬合。
+     两个「1 音弦」落在哪根弦、哪个品位由第 36 轮的换弦选音规则统一安排
+     （见 buildBlocks 的 lay）：它们会被推到 7 品窗里**中指 / 无名指**的位置，
+     不再靠 topSkip / preTopSkip 手工错位，也不再随定弦漂移。 */
+  { id:'313',   cn:'3-1-3 跨弦（最高弦 4 音 · 5 弦 12 音）', seq:[3,1,3,1,3], topAdd:1 },
   { id:'212',   cn:'2-1-2 琶音 两八度（最多 6 弦 9 音）', seq:[2,1,2,1,2,1], arp:true, minStr:3 },
   { id:'212b',  cn:'2-1-2 基本型（3 弦 5 音）', seq:[2,1,2], arp:true },
   { id:'2nps',  cn:'一弦二音（五声型）', seq:[2,2,2,2,2,2] },
+  /* 开放调弦（Open D / Open G / DADGAD / FACGCE / DAEAC#E / CGDGBD…）不再单列指型：
+     第 36 轮起它们与标准定弦走**同一条**换弦选音规则，用上面这些跨弦形状
+     （一弦三音 / 3-1-3 / 2-1-2 …）直接铺，音位由「7 品窗 + 1 音弦偏置」现算。 */
   { id:'caged', cn:'CAGED 五型色块' },
   { id:'box',   cn:'把位窗（每 3 品一窗）' }
 ];
@@ -3760,36 +3922,57 @@ function buildBlocks(sc, ctx){
     return { list:list, of:of };
   }
 
-  /* 通用：纵向「把位」。
+  /* 通用：纵向「把位」（第 36 轮重写换弦选音规则、第 37 轮补窗让位，见下面 lay 上方那段）。
      —— 把位不是「沿琴颈数音程」，而是跨弦方向的一条完整指型：
-        锚点 = 音阶某一级落在最低弦上的品位，从锚点起自下而上逐弦取 seq 个音。
+        锚点 = 音阶某一级落在**起始弦**上的品位；7 品窗通常就贴在锚点上
+        （必要时向左让 1–2 品，好让最高弦那条 4 音跑句也落回窗内）。
      —— 锚点遍历整条指板（不再只扫显示窗口），所以七声音阶稳定得到 7 个把位，
         与把位指型教材的 Position 1–7 编号方式对齐。
      —— 每个把位自带品窗，因此「显示范围」不再裁剪把位内容（分屏时尤其明显）。 */
-  const n = sc.iv.length, seq = P.seq, skip = P.skip || 0;
+  const n = sc.iv.length;
+  /* 骨架 seq = 「每根弦放几个音」。**铺满全部弦**的跑句型指型（PATTERNS 的 spanAll：
+     3NPS / 4NPS / 宽五声）在七弦定弦下要按 N 补长 —— 骨架只写 6 项，照原样落位会平移出两组
+     把位（第 7 弦起 = 2–7 弦组 / 第 6 弦起 = 1–6 弦组），而这几条指型本来就该铺满
+     全部弦、只占一档，多出来的那组各少一根弦、等于把同一张图重复印两遍。
+     补法 = 重复骨架最后一项（这几条骨架本来就是同一个数重复，所以等价于
+     「每弦 2 / 3 / 4 音 × N 弦」）→ minStr 跟着变成 N、起始弦只剩一个 → 只出一组。
+     第 40 轮（用户点名）；宽五声是第 41 轮沿用同一条路 —— 它的骨架只用来枚举锚点，
+     真正铺法在下面的 wideAt。弦数比骨架**短**时（4 / 5 弦贝斯）不走这条路，仍是自然截断。 */
+  const seq = P.seq ? ((P.spanAll && P.seq.length < N)
+      ? P.seq.concat(new Array(N - P.seq.length).fill(P.seq[P.seq.length - 1]))
+      : P.seq) : null;
   /* arp 每「一组」几个音：七声 4（1-3-5-7）、五声 3（1-3-5）、其余取 ceil(n/2)。
      绕满一组就回到根音、整组升一个八度。 */
   const arpM = P.arp ? Math.ceil(n / 2) : 0;
   /* 从 m 起推进 k 个音阶音：k=1 取下一个，k=2 隔一个取 */
   const adv = (m, k) => { for (let i = 0; i < k; i++) m = nextScaleMidi(m + 1, set); return m; };
 
-  /* 在起始弦 s0 的第 f0 品处试铺一个把位：自 s0 起向高音弦方向逐弦取 seq 个音。
-     · 只铺 seq.length 根弦 —— 3-1-3 是 5 弦 11 音、2-1-2 是 6 弦 9 音、3NPS 才铺满六弦；
+  /* 在起始弦 s0 的 f0 品处试铺一个把位 —— 锚点 = f0，窗底由 lay 现定（见下）。
+     · 只铺 seq.length 根弦 —— 3-1-3 是 5 弦 12 音、2-1-2 是 6 弦 9 音、3NPS 才铺满六弦；
        弦数少的模式刻意留空别的弦（原书 3-1-3 同样有一根弦不用）。
-     · 每换一根弦先跳过 skip 个音阶音：3-1-3 靠这一步把「1 音弦」按在该弦
-       三音组的中间音上；skip=0 的模式（3NPS / 4NPS / 2-1-2）换弦不额外跳。
+       七弦定弦下 3NPS / 4NPS 的骨架已补长成 7 项（spanAll），于是它们也铺满七弦；
+       其余的仍按 6 项骨架只占 6 根弦 —— 七弦上少用一根，这是有意的。
+     · 每根弦「取几个音」由 seq 定（最高弦另加 topAdd）—— 3-1-3 的最高弦 4 音就是
+       topAdd=1；它最高的两个音与下一个把位最高弦上的同名音咬合，
+       换把时看这两个音就知道手往哪走。
+     · 「起音取哪个品位」不在这里定：第 36 轮起统一交给下面 lay 的规则现算
+       （7 品窗 + 「1 音弦」落中指 / 无名指 + 向上连续取音），所以任何定弦、任何音阶
+       都走同一条逻辑 —— 见 lay 上方那段注释。
      · 取音方式分两种（见 PATTERNS 的 arp 字段）：
        普通（3NPS / 4NPS / 2NPS / 3-1-3）= 逐音取下一个音阶音；
        arp（2-1-2）= 三度叠置再八度重复 —— 组内逐音 +2 个音阶音，绕满一组只 +1
        （回到根音并升八度），七声得 1-3-5-7-1-3-5-7-1。这是本页
        把「2-1-2」叫 arpeggio（琶音）而不是 scale 的原因。
-     · 整块必须完整落在指板内（0 品是合法空弦），否则弃用该锚点 —— 低把位不会画出半条指型。
+     · 整块必须完整落在窗内（0 品是合法空弦），否则弃用该锚点 ——
+       低把位不会画出半条指型。
      · 起始弦可在弦组内滑动：seq 只占 5 根弦的 3-1-3，窗口能摆在「第 6–2 弦」或「第 5–1 弦」。
        原书两种起点都印过 —— 一本 2-1-2 琶音专书说起点可取第 6 / 5 / 4 / 3 弦；
        一本跨弦指型专书里起第 5 弦与起第 6 弦两种都出现过。
-       铺满全部弦的模式（3NPS / 4NPS / 2NPS / 2-1-2）窗口只有一个，不受影响。 */
+       铺满全部弦的模式（spanAll 的 3NPS / 4NPS / 宽五声，七弦上按 7 项骨架铺）起始弦只有一个，
+       不受影响；2NPS 与 2-1-2 在七弦上仍会滑出两组（前者骨架 6 项、后者 minStr:3）。 */
   /* minStr = 这条指型允许「至少占几根弦」，默认与 seq.length 相同（必须整条铺满，
      于是 3NPS / 4NPS / 2NPS 只有一档、3-1-3 两档，都与原书印法一致）。
+     —— 七弦定弦下 seq 已被 spanAll 补成 7 项，minStr 随之 = 7，3NPS / 4NPS 仍只有一档。
      2-1-2 例外：书中明说起点可取第 6 / 5 / 4 / 3 弦，
      起第 5 弦时它只铺 5 根弦（2-1-2-1-2，八音），所以给它 minStr:3 —— 能滑到第 3 弦起。 */
   const minStr = P.minStr || seq.length;
@@ -3799,32 +3982,243 @@ function buildBlocks(sc, ctx){
   const multi = starts.length > 1;
   const head = s0 => (multi ? '第 ' + (N - s0) + ' 弦起 · ' : '');
 
-  const lay = (s0, f0) => {
-    const cells = []; let midi = mid[s0] + f0;
-    const top = Math.min(hiIdx, s0 + seq.length - 1);
-    let k = 0;                                 /* 已取的音序号，供三度叠置分组 */
+  const topAdd  = P.topAdd || 0;               /* 最高弦多取几个音（见 PATTERNS） */
+  /* ---- 换弦选音规则（第 36 轮立 · 第 37 轮补「窗可向左让位」 · 第 38 轮定稿）---
+     「同一把位下运指最优」的两条硬指标：
+       ① 一整条指型在**横向**上限定在一个 **7 品窗**内（左右最多跨 7 品）；
+          豁免两种 —— 见下面 winFree；
+       ② 取音数为 1 的那根弦（3-1-3 的两个「1」、2-1-2 的「1」），它的音要落在
+          **中指 / 无名指**上 —— 即窗内相对最低品 +1 / +2 品，不用食指（+0）与小指（+3）。
+     —— 窗宽 WIN = 6；窗底通常就是锚点 f0，但允许向左让 d 品（d ≤ DMAX = 4）：
+        3-1-3 最高弦那条 4 音跑句最坏要跨 6 品，让窗左退几品它才落得回 6 品窗内。
+        实测把 DMAX 从 2 提到 4，「≤6 品」达成率在 3-1-3 上从 92.9% 提到 97.3%。
+     —— 每根弦的**起音**（质量由高到低三档，见下面 lay 的 mode）：
+        · ① **接续优先** —— 走完一根弦，指针停在该弦末音的下一个音阶音上，下一弦就接这个音。
+          多音弦（逐弦上行的跑句）与琶音弦（2-1-2 那一族，音是三度叠置的和弦音）**音是固定的**，
+          不能为了迁就手指而换音。
+        · ② **跳进**（退一步）—— 链上的音落不进窗内（定弦音程跳变太大，接续在物理上
+          不可能，例如 Drop D / DADGAD 的第 6→5 弦差 7 个半音）时，取**高于它的第一个**
+          窗内音阶音：跑句出现一次跳进，但绝不重复、绝不倒退。
+        · ③ **回退**（只为达标）—— 前两档都铺不出来、而窗宽已经到 7 品目标时，才允许
+          起音落回窗底（会出现同音高重复）。**只在 7 品窗这一档开**：放宽窗宽之后不再用。
+        · 取 1 个音的弦（非琶音）→ 音本来就有自由度：优先落 +1 / +2 品（中指 / 无名指）；
+          窗里没有这两个品位就退到最省力的那个（宁可食指按住已有的品位，
+          也不让手往右去够小指的位置）。
+     —— 取音一律**向上**逐取连续音阶音（arp 沿用三度叠置）；只要有一个音越出窗，
+        该 (窗宽, 让位) 组合作废。
+     —— 7 品窗铺不下时把窗宽逐品放宽（最多到 WIN_MAX）；低把位不会画出半条指型。
+     —— 实测（第 38 轮，窄探针 8 定弦 × 5 音阶 × 6 指型）：
+        ≤6 品达成率 2NPS/2-1-2 基本型 100% · 2-1-2 99.5% · 3-1-3 95.5% · 3NPS 88%；
+        宽探针（27 音阶 × 9 定弦）非豁免档合计 98%+ —— 剩下的全在含 3 半音大跳的
+        对称/异域音阶（增音阶、全音音阶）与「3-1-3 最高弦 4 音跑句」上：
+        4 个连续音阶音自身就要跨 7–8 品，7 品窗在数学上装不下（详见 docs/数据与算法.md）。 */
+  const WIN = 7, WIN_MAX = 11, DMAX = 4;
+  /* 豁免 7 品窗的两类（用户第 37 轮点名）：4NPS（每弦 4 音）、五声族音阶。
+     五声族由音阶自己带标记 —— sc.g === 'pent' 覆盖大小调五声与布鲁斯族
+     （它们每步 2–3 半音，一条 3 音跑句就要 4–6 品，7 品窗天然容不下）。 */
+  const winFree = !!P.winFree || sc.g === 'pent';
+  /* 宽五声（第 41 轮）：这一档不是「一条骨架铺满 N 根弦」，而是「两个相邻把位取并集」——
+     走下面同一套锚点枚举，但每个锚点要铺两次（本把位 + 右邻把位）再合并。 */
+  const isPentWide = (P.id === 'pentwide');
+
+  /* 在窗 [f0−d, f0−d+W−1]（winFree 时右端不封顶）里试铺一条指型。
+     返回 { cells, ones } —— ones = 落在 +1/+2 的「1 音弦」有几个；铺不下返回 null。
+     ⚠️ 音是**链式**走的：走完一根弦，指针停在该弦末音的下一个音阶音上，
+        下一弦就接这个音（`m`）。多音弦与琶音弦的音是固定的（前者是逐弦上行的跑句、
+        后者是三度叠置的和弦音），**不能为了迁就手指而换音**；只有非琶音的「1 音弦」
+        音本来就有自由度，才交给下面的打分去挑中指 / 无名指。
+        mode = 0（接得上）：链上期待的音落不回本弦窗内 → 整组作废，让窗再挪 / 放宽；
+        mode = 1（跳进）：起音从 `max(窗底, m − mid[s])` 起扫 —— 只允许**跳进**，不许下行；
+        mode = 2（兜底）：起音从窗底起扫 —— 允许下行（会出现重复音），只为把窗压到达标。 */
+  function layIn(s0, f0, W, d, mode, SQ){
+    const Q = SQ || seq;                     /* 骨架可换：宽五声要拿「每弦 2 音」单独铺一次 */
+    const lo = f0 - d, hi = winFree ? 24 : lo + W - 1;
+    if (lo < 0 || (!winFree && hi > 24)) return null;
+    const top = Math.min(hiIdx, s0 + Q.length - 1);
+    let k = 0, ones = 0;                       /* ones：落在 +1/+2 的「1 音弦」计数 */
+    let m = -1;                                /* 链上「期待的下一音」：跨弦继续用 */
+    /* 「最高弦」是这条指型的**定义末弦** —— 只有完整铺满 seq.length 根弦时才算数。
+       弦数不够时（4 弦贝斯放 5 弦的 3-1-3）按 seq 的前几项截断，不硬套最高弦规则。 */
+    const full = (hiIdx - s0 + 1) >= Q.length;
+    const cells = [];
+    /* 第 kk 个音（全局序号）之后该往上走几个音阶音：arp 每 arpM 个收一步（绕回根音） */
+    const stepAt = kk => arpM ? ((kk % arpM === arpM - 1) ? 1 : 2) : 1;
+    /* 本弦从 f 起取 cnt 个音，整条跑句是否都落回窗内（arp 弦按三度叠置一并试算） */
+    const runFits = (s, f, cnt) => {
+      if (cnt <= 1) return true;
+      let x = mid[s] + f;
+      for (let i = 0; i < cnt - 1; i++){
+        x = adv(x, stepAt(k + i));
+        if (x - mid[s] > hi) return false;
+      }
+      return true;
+    };
     for (let s = s0; s <= top; s++){
-      if (s > s0) midi = adv(midi, skip);
-      const cnt = seq[s - s0];
+      const isTop = (s === top) && s > s0 && full;  /* 最高弦：比别的弦多取 topAdd 个音 */
+      const cnt = Q[s - s0] + (isTop ? topAdd : 0);
+      let start = -1, scBest = Infinity;
+      /* ① 接续优先：把上一弦末音的下一个音阶音落在本弦上（多音弦 / 琶音弦） */
+      if (m >= 0 && (cnt > 1 || arpM)){
+        const f = m - mid[s];
+        if (f >= lo && f <= hi && runFits(s, f, cnt)){ start = f; scBest = -1; }
+      }
+      if (start < 0){
+        if (mode === 0 && m >= 0 && (cnt > 1 || arpM)) return null;   /* 接不上 → 让窗再挪 / 放宽 */
+        /* mode 1 也守**上行**这一条底线：候选起音不得低于链上期待的那个音
+           （m − mid[s]），否则本弦第一个音会掉到上一弦末音之下 —— 那是「重复音 /
+           跑句倒退」的来源。链上的音本身不在窗内时（更常见：定弦的音程跳变太大，
+           接续在物理上不可能，例如 Drop D / DADGAD 的第 6→5 弦差 7 个半音），
+           就取**高于它的第一个**窗内音阶音：跑句出现一次跳进，但绝不重复、绝不倒退。
+           ⚠️ 这一条对「1 音弦」也照加 —— 实测放它自由会让 3-1-3 里 36% 的卡片
+           出现跑句倒退 / 重复音（「1 音弦」达成率只从 99.5% 掉到 97.7%，
+           245 张卡换 29 张卡，不划算）。
+           mode 2 才是真正的兜底：允许下行，只为把整条压进目标窗（7 品）。 */
+        const fLow = (mode === 1 && m >= 0) ? Math.max(lo, m - mid[s]) : lo;
+        for (let f = fLow; f <= hi; f++){
+          if (!set.has(pcOf(mid[s] + f))) continue;
+          const r = f - lo;
+          /* 先看这个起音能不能让**本弦整条跑句**落回窗内：落不进就得整条锚点作废，
+             所以宁可把起音往右挪一品，也别白丢一个锚点。 */
+          const fit = runFits(s, f, cnt);
+          /* 打分：越小越好。落不进窗的候选一律排到最后；
+             「1 音弦」先抢 +1/+2（= 中指 / 无名指），抢不到就取离 1.5 最近的
+             （同分留靠左的那个 —— 宁可食指按住已有的品位，也不让手往右去够小指）；
+             其余弦一律贴窗左，把右侧空间整个留给本弦的跑句。 */
+          const v = !fit
+            ? (1000 + r)
+            : (cnt === 1)
+              ? ((r === 1 || r === 2) ? r : 100 + Math.abs(r - 1.5) * 2)
+              : r;
+          if (v < scBest){ scBest = v; start = f; }
+        }
+      }
+      if (start < 0) return null;              /* 这根弦在窗内一个音都没有 */
+      if (cnt === 1 && (start - lo === 1 || start - lo === 2)) ones++;
       const frets = [];
+      let x = mid[s] + start;
       for (let i = 0; i < cnt; i++){
-        const f = midi - mid[s];
-        if (f < 0 || f > 24) return null;      /* 0 品是合法空弦，不算越界 */
+        const f = x - mid[s];
+        if (f < lo || f > hi) return null;     /* 越出窗 → 这组 (窗宽, 让位) 作废 */
         frets.push(f);
-        midi = adv(midi, arpM ? ((k % arpM === arpM - 1) ? 1 : 2) : 1);
+        x = adv(x, stepAt(k));
         k++;
       }
       cells.push({ s:s, frets:frets });
+      m = x;                                   /* ← 下一弦从这里接 */
     }
-    return cells;
-  };
+    return { cells:cells, ones:ones };
+  }
 
+  /* 选窗 —— **窗宽是第一目标**（用户原话：「一个指型左右最好控制在 7 品范围内」；第 39 轮由 6 品放宽），
+     同一窗宽里再按质量挑：mode 0 接得上（链式完好）> mode 1 只允许跳进（不重复、不倒退）
+     > mode 2 允许倒退（会出现重复音）。所以循环是 **W 在外、质量在内**：
+       · 只要 7 品窗内铺得出来就一定要 7 品 —— 哪怕只能靠 mode 2 的跳进/回退；
+       · 7 品铺不下才逐品放宽，**放宽之后不再牺牲质量**（只用 mode 0 / 1）。
+     这不是「为了好看放弃正确」：一条 3NPS 跑句要覆盖 17 个音阶音 ≈ 28 个半音，
+     六根弦只跨 24 个半音 → 连续跑句必然要爬 5 品、加上弦内 2–3 品就是 8 品；
+     在弦间音程不规则的开放调弦（Open D / DADGAD / FACGCE…）里，
+     「连续」与「7 品」是数学上互斥的，只能二选一 —— 用户点名的是 7 品。
+     ⚠️ winFree（4NPS / 五声族）**只免右端**（hi 不封顶、窗宽不再放宽），
+        让位 d 照样要扫：链式跑句在音程跳变小/大时会整体向左漂，
+        若把 d 也锁成 0，跑句就永远落不到首音品之下 → 五声族被逼成「跳进」、
+        4NPS 在五声下整块铺不出来（都实测过）。
+     ⚠️ **同一档质量里取「1 音弦计数」最多的那一块**（平局留靠左的）。
+        副作用（第 38 轮实测、**故意保留**）：让位 d 会把整块往左推，推过之后
+        「起始弦的起音」可能就不再是锚点 f0 —— 于是相邻两个锚点铺出**同一块**，
+        先到的锚点占了它、后到的那个整块落空。表现为**位置网格偶尔缺一格**
+        （2-1-2 第 6 弦起少了 C / D 两块、3NPS 少了 F 根音那块），
+        但同形状在别的起始弦上都有（2-1-2 的 C / D 在「第 5 弦起」里），
+        而 3NPS 的 F 根音那块横向 7 品、6 品窗下本来就不存在。
+        试过「一律踩死锚点」与「候选列表 + 去重回退」两种改法，**两种都更差**：
+        前者把 3-1-3 的落位从 97.7% 拉到 95.2%（连标准定弦都出现 r=0），
+        后者多出 26 处把位顺序倒挂 + 落位掉到 95.5% —— 所以保留本写法。
+     —— 选窗这段抽成 pickW（骨架与「是否豁免」都当参数传）是第 41 轮为「宽五声」做的：
+        它要拿「每弦 2 音」的骨架把两个相邻把位各铺一次再取并集。lay 只是骨架默认那版。 */
+  function pickW(s0, f0, SQ, free){
+    const wmax = free ? WIN : WIN_MAX;
+    for (let W = WIN; W <= wmax; W++){
+      if (W > 24) break;
+      /* 回退档（mode 2）只在**真的受 7 品窗约束**的时候开：
+         winFree（4NPS、五声族音阶）本来就不判 7 品，没有达标压力，
+         就不该拿音的正确性去换 —— 实测开在 winFree 上会让 4NPS 的无重复率从 100% 掉到 45%。 */
+      const modes = (!free && W <= WIN) ? [0, 1, 2] : [0, 1];
+      let pick = null;
+      for (let mi = 0; mi < modes.length && !pick; mi++){
+        for (let d = 0; d <= DMAX; d++){
+          const r = layIn(s0, f0, W, d, modes[mi], SQ);
+          if (r && (!pick || r.ones > pick.ones)) pick = r;
+        }
+      }
+      if (pick) return pick.cells;
+      if (free) break;
+    }
+    return null;
+  }
+  const lay = (s0, f0) => pickW(s0, f0, seq, winFree);
+  /* 宽五声（第 41 轮）：五声把位 = 「每弦 2 音」，与 2NPS 同形，只是骨架按弦数走。
+     合并相邻把位要单独铺两次，所以绕开 lay 把骨架直接传进 pickW。 */
+  const SQ2 = new Array(N).fill(2);
+  const lay2 = (s0, f0) => pickW(s0, f0, SQ2, winFree);
+  /* 宽五声的单块 = 本把位（锚点 f0）∪ 右邻把位（起始弦上再往右一个音阶音 f1）。
+     两个相邻五声把位在每根弦上恰好共享一个边界音 —— 「本把位每弦的高音 = 右邻把位同弦的低音」
+     是指型教程讲五声衔接时明写的一条，所以并起来正好每弦 3 音，即 3-notes-per-string 五声。
+     并完若有哪根弦不是 3 音，说明这条定弦的弦间音程不规则（实测 DADGAD / Open G / 七弦 Drop A
+     上，相邻两个把位在部分弦上会共享 2 个音（并集只剩 2 音）或 0 个（并集 4 音））——
+     这时退回下面那条兜底，而不是把这个把位整块丢掉（否则那些定弦上会缺好几个把位，
+     七弦 Drop A 的小调五声甚至一块都铺不出来）。 */
+  function wideAt(s0, f0){
+    const a = lay2(s0, f0);
+    if (!a) return null;
+    let f1 = -1;
+    for (let f = f0 + 1; f <= 24; f++){ if (set.has(pcOf(mid[s0] + f))){ f1 = f; break; } }
+    const b = (f1 > 0) ? lay2(s0, f1) : null;
+    if (b){
+      const acc = new Map();
+      a.forEach(c => acc.set(c.s, c.frets.slice()));
+      b.forEach(c => {
+        const cur = acc.get(c.s);
+        if (!cur) return;
+        c.frets.forEach(f => { if (cur.indexOf(f) < 0) cur.push(f); });
+      });
+      let ok = true;
+      acc.forEach(frets => { if (frets.length !== 3) ok = false; });
+      if (ok){
+        const out = [];
+        acc.forEach((frets, s) => out.push({ s:s, frets:frets.slice().sort((x, y) => x - y) }));
+        return out;
+      }
+    }
+    /* 兜底：从**本把位每根弦的最低音**起取 3 个连续音阶音。
+       在弦间音程规则的定弦上，这与并集**逐音相同**（并集恰好就是「本把位的两个音 +
+       右邻把位多出来的那一个」）；只有不规则定弦才会走出不同的音 —— 代价是不再叫
+       「两个把位的并集」，好处是每个把位都还在、宽度也仍然是一弦三音。 */
+    const out = [];
+    for (let i = 0; i < a.length; i++){
+      const c = a[i], fr = [];
+      let x = mid[c.s] + c.frets[0];
+      for (let k = 0; k < 3; k++){
+        const f = x - mid[c.s];
+        if (f < 0 || f > 24) return null;
+        fr.push(f);
+        x = nextScaleMidi(x + 1, set);
+      }
+      out.push({ s:c.s, frets:fr });
+    }
+    return out;
+  }
+
+  /* 相邻锚点可能铺出**同一块**（窗让位之后尤其如此）→ 用音位签名去重，只画一次。 */
+  const seen = new Set();
   starts.forEach(s0 => {
     let cnt = 0;
     for (let f = 1; f <= 24 && cnt < n; f++){
       if (!set.has(pcOf(mid[s0] + f))) continue;
-      const cells = lay(s0, f);
-      if (cells) push(cells, head(s0) + '把位 ' + (++cnt));
+      const cells = isPentWide ? wideAt(s0, f) : lay(s0, f);
+      if (!cells) continue;
+      const sig = cells.map(c => c.s + ':' + c.frets.join('.')).join('|');
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      push(cells, head(s0) + '把位 ' + (++cnt));
     }
   });
   return { list:list, of:of };
@@ -4448,7 +4842,8 @@ function initControls(){
       + '</optgroup>';
   }).join('');
   $('scaleGroup').innerHTML = GROUPS.map(g => '<option value="' + g.id + '">' + g.cn + '</option>').join('');
-  $('patternSel').innerHTML = PATTERNS.map(p => '<option value="' + p.id + '">' + p.cn + '</option>').join('');
+  /* 指型下拉要等音阶定下来再填：档位随音阶换（宽五声 ⇄ 4NPS），见 fillPatternSel */
+  $('patternSel').innerHTML = '';
   fillStringSel();
   fillArpControls();
   fillQueryControls();
@@ -4468,6 +4863,7 @@ function initControls(){
 
   /* 音阶下拉 */
   fillScaleSel();
+  fillPatternSel();
 
   /* 还原状态 */
   $('rootSel').value = S.root;
@@ -4501,24 +4897,53 @@ function fillStringSel(){
   if (!gs.some(g => g.id === S.strings)) S.strings = 'all';
   $('stringSel').value = S.strings;
 }
+/* 指型下拉带一档「随音阶换」的档位（第 41 轮）：大小调五声下 4NPS 铺不出来
+   （每弦 4 音 × 6 弦 = 24 音 ≈ 4.8 个八度，24 品装不下），那一档换成「宽五声」；
+   反过来，其余音阶不提供宽五声。换音阶时两个档位互相顶替，
+   而不是把用户原来选的档位悄悄丢掉（退回「不分区」）。 */
+function patternList(){
+  const wide = pentWideScale(S.scale);
+  return PATTERNS.filter(p => wide ? p.id !== '4nps' : p.id !== 'pentwide');
+}
+function fillPatternSel(){
+  const list = patternList();
+  $('patternSel').innerHTML = list.map(p => '<option value="' + p.id + '">' + p.cn + '</option>').join('');
+  if (!list.some(p => p.id === S.pattern)){
+    S.patternPos = 0;
+    if (S.pattern === '4nps')            S.pattern = 'pentwide';
+    else if (S.pattern === 'pentwide')   S.pattern = '4nps';
+    else                                 S.pattern = 'off';
+  }
+  $('patternSel').value = S.pattern;
+}
+/* 提示文案里那句「7 品窗」：五声族音阶是豁免档（见 buildBlocks 的 winFree），
+   得换个说法，否则页面上写的和实际画的对不上。 */
+function winFreeNow(){ return scaleById(S.scale).g === 'pent'; }
+/* 带「宽五声」这一档的音阶（第 41 轮）：只有大调 / 小调五声 ——
+   它们每弦 4 音的 4NPS 在 24 品内铺不出来（5 音音阶 × 每弦 4 音 = 24 音 ≈ 4.8 个八度），
+   那一档由宽五声顶替。布鲁斯族虽然同属五声族、4NPS 同样铺不出来，但音数不是 5，
+   「两个相邻把位在每根弦上共享一个边界音」不成立，所以不给它们开这一档。 */
+function pentWideScale(id){ return id === 'pent_major' || id === 'pent_minor'; }
+function winPhrase(){ return winFreeNow()
+  ? '五声族音阶不受 7 品窗约束（一条弦就跑半个把位）'
+  : '整条把位落在 7 品窗内'; }
 const PATTERN_HINT = {
   off:   '整块显示，不切分把位',
-  '3nps':'每弦 3 音，整条把位落在一个 4–5 品窄窗里 —— 对应把位指型教材的 Position 1–7',
-  '4nps':'每弦 4 音，同一个把位内铺开 —— 把位指型教材第三卷的写法',
-  '313': '跨弦 3-1-3-1-3：只占 5 根弦、共 11 音；换弦时跳过 1 个音阶音，所以「1 音弦」弹的是该弦三音组的中间音。起始弦可在弦组内滑动，原书起第 5 弦与起第 6 弦两种都印过，两条都列出来',
-  '212': '跨弦 2-1-2-1-2-1、最多 6 根弦 9 音。取音不是连续音阶音，而是「三度叠置 + 八度重复」的琶音（1-3-5-7-1-3-5-7-1）；起始弦四种：第 6 / 5 / 4 / 3 弦，指型按剩余弦数自然截断（起第 6 弦 9 音、第 5 弦 8 音、第 4 弦 6 音、第 3 弦 5 音）。原书 Root 6 第 1 例（起第 6 弦、记 C 调）= C E G B C E G B C；Root 5 第 1 例（起第 5 弦、改记 F 调）= F A C E F A C E',
-  '212b':'跨弦 2-1-2 的基本型：只占 3 根弦、共 5 音 —— 「2-1-2」这个名字的由来（书中的 Cm7 例子：6弦 8-11、5弦 10、4弦 8-10）。起始弦四种都有：第 6 / 5 / 4 / 3 弦',
-  '2nps':'每弦 2 音（五声型）',
-  'caged':'五型 = 五个「位置窗」：以某根弦上的根音为准向高音方向铺 5 品 —— '
-    + 'A 型锚第 5 弦、G 型锚第 3 弦、E 型锚第 6 弦、D 型锚第 4 弦、C 型锚第 2 弦，'
-    + '窗 = 根音品 −1 … +3。C 调下依次是 2–6 / 4–8 / 7–11 / 9–13 / 12–16 品。'
-    + '窗只由主音位置决定、与音阶无关：换音阶只换窗里的音，五个窗的位置不动；'
-    + '相邻两窗永远叠 2–3 品，那几品两种指法都按得到',
+  '3nps': () => '每弦 3 音 · ' + winPhrase() + ' —— 对应把位指型教材的 Position 1–7',
+  '4nps':'每弦 4 音 · 一条弦就跑满半个把位，不受 7 品窗约束 —— 把位指型教材第三卷的写法',
+  'pentwide': () => '宽五声 · 每弦 3 音（食指起、小指落）= 本把位 + 右邻把位合并：'
+    + '两个相邻的五声把位在每根弦上共享一个边界音，并起来正好每弦 3 音 · ' + winPhrase(),
+  '313': '跨弦 3-1-3 · 5 弦 12 音 · 最高弦 4 音 · 两个「1 音弦」落在中指 / 无名指上',
+  '212': '跨弦 2-1-2 琶音 · 最多 6 弦 9 音 · 「1 音弦」落在中指 / 无名指上',
+  '212b':'跨弦 2-1-2 基本型 · 3 弦 5 音',
+  '2nps': () => '每弦 2 音（五声型）· ' + winPhrase(),
+  'caged':'五型 = 五个位置窗（根音品 −1 … +3）· 只跟主音走、与音阶无关',
   'box': '按品窗切块（每 4 品一窗）'
 };
 function fillPatternPos(){
   const P = patternById(S.pattern);
-  $('patternHint').textContent = PATTERN_HINT[P.id] || '';
+  const hint = PATTERN_HINT[P.id];
+  $('patternHint').textContent = (typeof hint === 'function') ? hint() : (hint || '');
   const bl = currentBlocks();
   const cnt = bl ? bl.list.length : 0;
   const split = (S.fbSplit && P.id !== 'off' && cnt > 1);
@@ -4648,7 +5073,8 @@ function updateScaleInfo(){
   $('scaleInfo').innerHTML = head;
 
   $('scaleChord').innerHTML = '<span class="chip hero">' + chordFullName(sc, S.root) + '</span>'
-    + sc.chord.iv.map(i => '<span class="chip">' + noteName((S.root + i) % 12) + ' ' + DEG[i] + '</span>').join('');
+    + sc.chord.iv.map(i => '<span class="chip">' + noteName((S.root + i) % 12) + ' '
+        + chordToneDeg(sc.chord.iv, i, true) + '</span>').join('');
   $('scaleUses').innerHTML = (sc.uses && sc.uses.length)
     ? sc.uses.map(u => '<span class="chip">' + u + '</span>').join('') : '<span class="tip">—</span>';
   $('scaleUse').textContent = sc.u || '';
@@ -4917,9 +5343,24 @@ function renderCaged(){
   const order = cagedOrderByPos(forms, root, t.mid);
   const book = cagedIsBook(qual);
   const toneNames = qi.iv.map(i => noteName((root + i) % 12)).join(' ');
-  const degStr = d => { const s = String(d); return (s === '3' && qual === 'min' && !bass) ? 'b3' : s; };
+  /* 显示用的音级名：指型表里的 deg 是**音阶口径**的音级名（NUM，一个半音数只配
+     一个名字），这里先把它还原回半音数，再交给 chordToneDeg 按和弦功能定名 ——
+     增五度写 #5、九音写 9、减七的七音写 bb7，都集中在那一处（见其注释）。
+     只有一处要先把名字改掉：原书那个骨架是「大调骨架」，小三和弦的槽位上写着 3，
+     实际该记 b3。 */
+  const degStr = d => {
+    let p = NUM.indexOf(String(d));
+    if (p < 0) p = 0;
+    if (p === 4 && qual === 'min' && !bass) p = 3;
+    return chordToneDeg(qi.iv, p, false);
+  };
   const dLabel = d => { const s = degStr(d); return s === '1' ? 'R' : s; };
-  const dIndex = d => { const k = NUM.indexOf(degStr(d)); return k < 0 ? 0 : k; };
+  /* 颜色按「半音数」查表：等音改写过的名字（#5 与 b6、9 与 2、bb7 与 6）
+     是同一个音高，共用一个色位 */
+  const dIndex = d => {
+    const k = DEG_SEMI[degStr(d)];
+    return k === undefined ? 0 : k;
+  };
 
   const SW = 21, SH = 22, PADT = 30, PADL = 22;
   const MW = PADL + (N - 1) * SW + 16;
@@ -5165,6 +5606,7 @@ function harmLoad(ri, li){
    窗内每根弦取「最靠近该型根音」的那个琶音音，得到每弦一音的标准把位指型。
    ============================================================ */
 let arpSel = '';        /* 选中的型（键名字符串，如 'C'）；空 = 还没点过任何卡片 */
+const ARP_GHOST_SPAN = 5;   /* 邻近把位：以「根音位置」为基准向左右各延伸的品数 */
 
 /* 某个 CAGED 型在给定根音下的把位窗（按当前乐器取骨架，含 7/5 弦低弦扩展） */
 function cagedWindow(form, root, mid){
@@ -5330,6 +5772,8 @@ function renderArp(){
     nmap[(((root + sc.chord.iv[k]) % 12) + 12) % 12] = nm2;
   });
   const nmOf = pc => nmap[pc] || nameOf(pc, sc.preferFlat || S.flats);
+  /* 图上的音级名：按和弦功能定名（8→#5、2→9、9→bb7 或 13），见 chordToneDeg */
+  const toneDeg = i => chordToneDeg(sc.chord.iv, i, true);
   $('arpInfo').textContent = nameOf(root, sc.preferFlat || S.flats) + sc.chordSym + ' · '
     + sc.chord.iv.map(i => nmOf(((root + i) % 12 + 12) % 12)).join(' ');
 
@@ -5350,7 +5794,41 @@ function renderArp(){
     const fs2 = t.notes.map(n => n.f);
     const minF = Math.min.apply(null, fs2), maxF2 = Math.max.apply(null, fs2);
     if (maxF2 > maxF) return;                       /* 该把位超出所选范围 */
-    let startF = Math.round((t.w.lo + t.w.hi) / 2) - Math.floor(WIN / 2);
+
+    /* ---- 左 / 右邻近把位 ----
+       基准「根音位置」= 锚点弦上那个根音的品位 t.w.af（正是该 CAGED 型的定义位置）。
+       左邻近 = 品位落在 [根音 − 5, 根音 − 1] 的同一个琶音内音；
+       右邻近 = 品位落在 [根音 + 1, 根音 + 5] 的同一个琶音内音。
+       两个方向各自独立开关；本型已经画成实心圈的音不再重复画成空心圈。 */
+    const rootF = t.w.af;
+    const own   = {};
+    t.notes.forEach(n => { own[n.s + ':' + n.f] = 1; });
+    const pcSet = {};
+    sc.chord.iv.forEach(i => { pcSet[(((root + i) % 12) + 12) % 12] = 1; });
+    const near = [];
+    const scanNear = (dir, from, to) => {
+      const f0 = Math.max(0, from), f1 = Math.min(to, maxF);
+      for (let s = 0; s < NST; s++){
+        for (let f = f0; f <= f1; f++){
+          const pc = (((mid[s] + f) % 12) + 12) % 12;
+          if (!pcSet[pc] || own[s + ':' + f]) continue;
+          near.push({ s:s, f:f, pc:pc, iv: ((((pc - root) % 12) + 12) % 12), dir: dir });
+        }
+      }
+    };
+    if (S.arpGhostL) scanNear('L', rootF - ARP_GHOST_SPAN, rootF - 1);
+    if (S.arpGhostR) scanNear('R', rootF + 1, rootF + ARP_GHOST_SPAN);
+    const nL = near.filter(n => n.dir === 'L').length;
+    const nR = near.length - nL;
+
+    /* 显示窗仍固定 WIN 品：以把位窗为中心，但要保证左右邻近音一个都不被裁掉。
+       把位窗本身只有 3~4 品跨度，两边各推 ARP_GHOST_SPAN 品后合计最多 11 品，
+       一定塞得进 12 品的窗 —— 所以只把窗平移一点即可，不必加宽。 */
+    let loN = minF, hiN = maxF2;
+    near.forEach(n => { if (n.f < loN) loN = n.f; if (n.f > hiN) hiN = n.f; });
+    if (hiN - loN >= WIN) loN = hiN - WIN + 1;      /* 理论到不了；真到了也先保住右侧 */
+    const ctrF = Math.round((t.w.lo + t.w.hi) / 2) - Math.floor(WIN / 2);
+    let startF = Math.max(Math.min(ctrF, loN), hiN - WIN + 1);
     startF = Math.max(0, Math.min(startF, Math.max(0, maxF - WIN + 1)));
     const span  = Math.min(maxF, startF + WIN - 1) - startF + 1;
     const xOf   = f  => PADL + (f - startF + 0.5) * FW;    /* 品格中心横坐标 */
@@ -5408,49 +5886,40 @@ function renderArp(){
         + '<circle cx="' + x + '" cy="' + y + '" r="8.6" fill="' + col + '"/>'
         + (isRoot ? '<circle cx="' + x + '" cy="' + y + '" r="3" fill="#fff"/>' : '')
         + '<text x="' + x + '" y="' + y + '" dy=".35em" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff" style="'
-        + (isRoot ? 'display:none' : '') + '">' + DEG[n.iv] + '</text>'
+        + (isRoot ? 'display:none' : '') + '">' + toneDeg(n.iv) + '</text>'
         + '</g>';
     });
 
-    /* 本型之外的、但落在同一显示范围内的同一个琶音音 → 画成空心圈。
-       下一把位的音先露出来，换把时手往哪边走就有依据了。 */
-    const endF2 = startF + span - 1;
-    const own   = {};
-    t.notes.forEach(n => { own[n.s + ':' + n.f] = 1; });
-    const pcSet = {};
-    sc.chord.iv.forEach(i => { pcSet[(((root + i) % 12) + 12) % 12] = 1; });
-    const ghosts = [];
-    if (S.arpGhost){
-      for (let s = 0; s < NST; s++){
-        for (let f = startF; f <= endF2; f++){
-          const pc = (((mid[s] + f) % 12) + 12) % 12;
-          if (!pcSet[pc] || own[s + ':' + f]) continue;
-          ghosts.push({ s:s, f:f, pc:pc, iv: ((((pc - root) % 12) + 12) % 12) });
-        }
-      }
-    }
-    ghosts.forEach(n => {
+    /* 邻近把位的音 → 空心圈（已在上面按「根音 ± ARP_GHOST_SPAN 品」算好）。
+       左邻近用虚线、右邻近用实线，两向都开时一眼能看出手该往哪边挪。 */
+    near.forEach(n => {
       const x = xOf(n.f), y = yOf(n.s);
       const isRoot = n.pc === (((root % 12) + 12) % 12);
       const col = isRoot ? 'var(--accent)' : DEGCOLOR[n.iv];
       const midi = mid[n.s] + n.f;
       g += '<g class="arp-ghost" data-midi="' + midi + '" data-s="' + n.s + '" data-f="' + n.f
-        + '" data-pc="' + n.pc + '" data-form="' + k + '" data-ghost="1" style="cursor:pointer">'
+        + '" data-pc="' + n.pc + '" data-form="' + k + '" data-ghost="1" data-dir="' + n.dir
+        + '" style="cursor:pointer">'
         + '<circle cx="' + x + '" cy="' + y + '" r="8" fill="' + col + '" fill-opacity=".14" stroke="'
-        + col + '" stroke-width="1.5"/>'
+        + col + '" stroke-width="1.5"' + (n.dir === 'L' ? ' stroke-dasharray="3 2.4"' : '') + '/>'
         + (isRoot ? '<circle cx="' + x + '" cy="' + y + '" r="2.4" fill="' + col + '"/>' : '')
         + '<text x="' + x + '" y="' + y + '" dy=".35em" text-anchor="middle" font-size="9" font-weight="700"'
-        + ' fill="' + col + '" style="' + (isRoot ? 'display:none' : '') + '">' + DEG[n.iv] + '</text>'
+        + ' fill="' + col + '" style="' + (isRoot ? 'display:none' : '') + '">' + toneDeg(n.iv) + '</text>'
         + '</g>';
     });
     g += '</svg>';
 
     const toneNames = sc.chord.iv.map(i => nmOf(((root + i) % 12 + 12) % 12)).join(' ');
+    const ghostMeta = (S.arpGhostL || S.arpGhostR)
+      ? ' · 空心 ' + near.length + ' 音＝邻近把位（'
+        + (S.arpGhostL ? '左 ' + nL : '') + ((S.arpGhostL && S.arpGhostR) ? ' / ' : '')
+        + (S.arpGhostR ? '右 ' + nR : '') + '）'
+      : '';
     html += '<div class="caged-card' + (k === arpSel ? ' sel' : '') + '" data-card-form="' + k + '">'
       + '<h4>' + k + ' 型</h4>'
-      + '<div class="meta">第 ' + minF + ' 品起 · 把位窗 ' + t.w.lo + '–' + t.w.hi + ' 品 · 图中显示 '
-      + startF + '–' + (startF + span - 1) + ' 品'
-      + (ghosts.length ? ' · 空心 ' + ghosts.length + ' 音＝相邻把位' : '') + '</div>'
+      + '<div class="meta">第 ' + minF + ' 品起 · 把位窗 ' + t.w.lo + '–' + t.w.hi
+      + ' 品 · 根音 ' + rootF + ' 品 · 图中显示 '
+      + startF + '–' + (startF + span - 1) + ' 品' + ghostMeta + '</div>'
       + g
       + '<div class="tones">' + nameOf(root, sc.preferFlat || S.flats) + sc.chordSym + '：' + toneNames + '</div>'
       + '</div>';
@@ -5463,17 +5932,24 @@ function renderArp(){
     ? cands.map(c => '<button class="qbtn" data-scale="' + c.id + '">' + c.cn + '<small>' + c.en + '</small></button>').join('')
     : '<span class="tip">没有找到完全包含该琶音的常见音阶。</span>';
   $('arpTip').textContent = sc.d;
-  paintArpGhostBtn();
+  paintArpGhostBtns();
 }
 
-/* 相邻把位音开关的按钮文案与状态 */
-function paintArpGhostBtn(){
-  const el = $('arpGhostBtn'); if (!el) return;
-  el.innerHTML = '<i class="sw2"></i><span>相邻把位音 · ' + (S.arpGhost ? '显示中' : '已关闭') + '</span>';
-  el.classList.toggle('off', !S.arpGhost);
-  el.title = S.arpGhost
-    ? '当前：实心＝本型指型，空心＝相邻把位的可用音。点击只显示本型'
-    : '当前：只显示本型指型。点击显示相邻把位的可用音';
+/* 左右两个邻近把位开关的按钮文案与状态 */
+function paintArpGhostBtns(){
+  const one = (id, on, label, what) => {
+    const el = $(id); if (!el) return;
+    el.innerHTML = '<i class="sw2"></i><span>' + label + ' · ' + (on ? '显示中' : '已关闭') + '</span>';
+    el.classList.toggle('off', !on);
+    el.title = on
+      ? '当前：显示' + what + '（' + (id === 'arpGhostLBtn' ? '虚线' : '实线')
+        + '空心圈）。点击关闭'
+      : '当前：不显示' + what + '。点击展开';
+  };
+  one('arpGhostLBtn', S.arpGhostL, '左邻近把位',
+    '以根音位置为基准、向左 ' + ARP_GHOST_SPAN + ' 品范围内的同一个琶音内音');
+  one('arpGhostRBtn', S.arpGhostR, '右邻近把位',
+    '以根音位置为基准、向右 ' + ARP_GHOST_SPAN + ' 品范围内的同一个琶音内音');
 }
 
 /* ============================================================
@@ -5581,8 +6057,8 @@ function chordLabel(root, qual){
   const q = typeof qual === 'string' ? qualById(qual) : qual;
   return nameOf(root, S.flats) + q.sym;
 }
-/* 和弦音级（用于显示），按半音数取音级名 */
-function chordDegNames(iv){ return iv.map(i => DEG[i]).join(' · '); }
+/* 和弦音级（用于显示）：按半音数交给 chordToneDeg 定名（8→#5、2→9、9→bb7 或 13） */
+function chordDegNames(iv){ return iv.map(i => chordToneDeg(iv, i, true)).join(' · '); }
 
 /* 和弦记号解析：Dm7 / Cmaj7 / F#m7b5 / Bb7alt … */
 function parseChordText(txt){
@@ -6823,7 +7299,7 @@ function vcCands(it, mid){
           const m2 = mid[i] + f;
           const pc = (((m2) % 12) + 12) % 12;
           const off = (((pc - root) % 12) + 12) % 12;
-          notes.push({ s:i, f:f, midi:m2, pc:pc, off:off, lab:DEG[off] });
+          notes.push({ s:i, f:f, midi:m2, pc:pc, off:off, lab:chordToneDeg(iv, off, true) });
           sound.push(pc);
           if (f > 0) fretted.push(f);
         }
@@ -8858,9 +9334,10 @@ function bind(){
   $('scaleGroup').onchange = e => {
     S.group = e.target.value; fillScaleSel();
     S.scale = $('scaleSel').value;
+    fillPatternSel();
     refreshAll(); renderLibFilters(); renderLib();
   };
-  $('scaleSel').onchange = e => { S.scale = e.target.value; refreshAll(); renderLib(); };
+  $('scaleSel').onchange = e => { S.scale = e.target.value; fillPatternSel(); refreshAll(); renderLib(); };
   $('rangeSel').onchange = e => {
     const p = e.target.value.split(',').map(Number);
     if (!isFinite(p[0]) || !isFinite(p[1])){
@@ -8978,9 +9455,13 @@ function bind(){
   $('arpRoot').onchange  = e => { S.root = parseInt(e.target.value, 10) || 0; $('rootSel').value = S.root; save(); renderArp(); };
   $('arpType').onchange  = e => { S.arp = e.target.value; save(); renderArp(); };
   $('arpRange').onchange = e => { S.arpRange = parseInt(e.target.value, 10) || 20; save(); renderArp(); };
-  $('arpGhostBtn').onclick = () => {
-    S.arpGhost = !S.arpGhost; save(); renderArp();
-    toast(S.arpGhost ? '相邻把位音：显示（空心圈）' : '相邻把位音：关闭（只留本型）');
+  $('arpGhostLBtn').onclick = () => {
+    S.arpGhostL = !S.arpGhostL; save(); renderArp();
+    toast('左邻近把位：' + (S.arpGhostL ? '展开（虚线空心圈）' : '关闭'));
+  };
+  $('arpGhostRBtn').onclick = () => {
+    S.arpGhostR = !S.arpGhostR; save(); renderArp();
+    toast('右邻近把位：' + (S.arpGhostR ? '展开（实线空心圈）' : '关闭'));
   };
   $('arpGrid').addEventListener('click', e => {
     const card = e.target.closest ? e.target.closest('.caged-card') : null;

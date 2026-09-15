@@ -63,7 +63,7 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 |---|---|
 | Scales / arpeggios | **81** across **9** families |
 | Mode colour profiles | **58** |
-| Fingering systems | **9** (3NPS, 4NPS, 3-1-3, 2-1-2, 2-1-2 basic, 2NPS, CAGED, position window, unsegmented) |
+| Fingering systems | **10** (3NPS, 4NPS, wide pentatonic, 3-1-3, 2-1-2, 2-1-2 basic, 2NPS, CAGED, position window, unsegmented). **9** are visible at a time — major / minor pentatonic swaps 4NPS for wide pentatonic |
 | Tunings | **17** (6-string guitar 10, 7-string 5, 4-string bass 1, 5-string bass 1) |
 | Chord qualities | **23** |
 | Chord progressions | **456** |
