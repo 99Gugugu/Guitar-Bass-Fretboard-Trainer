@@ -287,6 +287,27 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
 .note.blkhide{pointer-events:none}
 .note.dim .nc{opacity:.13 !important}
 .note.dim .nl{opacity:0 !important}
+/* ---------- 视奏练习（第 51 轮） ----------
+   点指板上任一音 → **同音高的位置全部高亮**。
+   圆环的颜色由 JS 按音高类写成 --pkN（与点音反查同一套色），
+   这里只负责那一圈光晕；描边粗细也在 JS 里写，避免两处各说各话。 */
+#fbTrain g.note.same{filter:drop-shadow(0 0 3px rgba(37,99,235,.8))}
+/* 题板：指板图下方实时记录「题目」与「你的作答」 */
+.sightbox{margin-top:11px; border-top:1px solid var(--border); padding-top:10px}
+.sbrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-height:30px}
+.sbrow+.sbrow{margin-top:6px}
+.sblab{font-size:11.5px; font-weight:700; color:var(--muted); min-width:58px; flex:none}
+.sbseq{display:flex; gap:5px; flex-wrap:wrap; flex:1 1 auto}
+/* 谱面容器：宽度不够时让 svg 自己缩（svg 里写了 max-width:100%），别把题板撑破 */
+.staffwrap{flex:1 1 auto; min-width:0}
+.sbchip{display:inline-flex; align-items:baseline; gap:4px; padding:4px 9px; border-radius:8px;
+  background:var(--panel2); border:1.5px solid var(--border); font-size:12.5px; font-weight:700;
+  color:var(--text)}
+.sbchip i{font-style:normal; font-size:9.5px; font-weight:600; color:var(--muted)}
+.sbchip.done{border-color:var(--border2); color:var(--text2)}
+.sbchip.cur{border-color:var(--accent2); background:rgba(37,99,235,.09)}
+.sbchip.bad{border-color:var(--accent); background:rgba(229,72,77,.13); color:var(--accent)}
+.sbfoot{gap:8px}
 /* 指型色块图例 */
 .blk{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text2); font-weight:600;
   padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:var(--panel2); cursor:pointer}
@@ -796,6 +817,7 @@ body{padding-bottom:74px}
             <button class="game-btn" data-g="ear" data-page-node-id="glLsbLv5He7tFhiDFZmGEP"><b data-page-node-id="40iKKhIuMyQx1cxXtPCvul">听音辨名</b><small data-page-node-id="G4hn3elcY9P4qxcK0jjAyL">听音说出音名</small></button>
             <button class="game-btn" data-g="intv" data-page-node-id="TOh6DWBX0oF8i1lOhfGvvg"><b data-page-node-id="iXR0SOYy6I9CPrB5KsibJR">音程听辨</b><small data-page-node-id="DxEp3iSOJKa4xNbOGoOZKK">听两个音判断音程</small></button>
             <button class="game-btn" data-g="mode" data-page-node-id="9eZXYtAMmM5gdHKX1nvRx0"><b data-page-node-id="j3M6YStGw63EaHzft0fuG6">音阶听辨</b><small data-page-node-id="LHTzw60qHALpmAF4McQKCt">听一条音阶判断它是哪个调式</small></button>
+            <button class="game-btn" data-g="sight" data-page-node-id="SightGameBtn"><b data-page-node-id="SightGameBtnT">视奏练习</b><small data-page-node-id="SightGameBtnS">看五线谱在指板找音</small></button>
           </div>
         </div>
 
@@ -842,6 +864,7 @@ body{padding-bottom:74px}
         <div class="card" style="padding:12px" data-page-node-id="1BceWsZe6GtakpHg98FQk3">
           <div class="fb-stage" id="fbTrain" data-page-node-id="6IpVW6gbHJ7XlKMtxKbimo"></div>
           <div id="gameChoices" data-page-node-id="aj9R5oBpenrHxXeYlMvRlz"></div>
+          <div class="sightbox" id="sightBox" style="display:none" data-page-node-id="SightBox"></div>
         </div>
       </div>
     </div>
@@ -1232,7 +1255,7 @@ body{padding-bottom:74px}
     <div class="layout" data-page-node-id="CqLayout">
       <div data-page-node-id="CqLeft">
         <div class="card" data-page-node-id="CqCard1">
-          <div class="card-t"><h3>匹配方式</h3><span class="hint">最少 3 个音</span></div>
+          <div class="card-t"><h3>匹配方式</h3><span class="hint">匹配最少 3 个音 · 点 2 个音看音程</span></div>
           <div class="field">
             <label>模式</label>
             <div class="seg mini" id="cqModeSeg" data-page-node-id="CqModeSeg">
@@ -3775,6 +3798,14 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   if (!Array.isArray(S.modeGroups)) S.modeGroups = ['major'];
   S.modeGroups = S.modeGroups.filter(id => EAR_GROUPS.some(g => g.id === id));
   if (!S.modeGroups.length) S.modeGroups = ['major'];
+  /* 视奏练习：出题用的母音阶组 + 每题音符数 + 是否在谱下标注音名。
+     ⚠ 这里跑在常量 SIGHT_MIN/SIGHT_MAX/SIGHT_DEF 之前（它们在练习模式那一段），
+        所以上下限只能写死字面量 —— 改那几个常量时这几行要一起改。 */
+  if (!Array.isArray(S.sightGroups)) S.sightGroups = ['major'];
+  S.sightGroups = S.sightGroups.filter(id => EAR_GROUPS.some(g => g.id === id));
+  if (!S.sightGroups.length) S.sightGroups = ['major'];
+  S.sightLen = num(S.sightLen, 5, 3, 12);
+  S.sightNames = !!S.sightNames;
 })();
 if (S.group === 'mode') S.group = 'major';   /* 旧版本分组迁移 */
 if (!GROUPS.some(g => g.id === S.group)) S.group = 'major';
@@ -8196,9 +8227,33 @@ const GAME_HELP = {
   fill:'给出一个调性音阶，指板上的音阶音有一部分被藏起来（问号）。把藏起来的位置全部点开。\n练的是「知道这个位置属于音阶的哪一级」。可以配合左侧「播放音阶」先听一遍。',
   ear:'随机弹响一个音，从下方按钮中选出它的音名。\n如果觉得太难，可以把顶栏定弦调成标准，并先在「指板探索」里把 12 个音名背熟。',
   intv:'先弹一个根音，再弹一个音，你要判断两者之间的音程。\n建议：先听它是「近」还是「远」，再听色彩（大/小、纯/减）。',
-  mode:'弹一条音阶，从选项里挑出它是哪个调式。\n左侧「听辨范围」按<b>母音阶体系</b>分组 —— 勾上哪一组，就把该体系的母音阶和它的全部子音阶（各个调式）一起放进题库。可以多选，也可以只勾一组死磕。\n重点听<b>特征音</b>：多利亚的大六度、弗里吉亚的 b2、利底亚的 #4、混合利底亚的 b7；和声 / 旋律小调体系还要留意 b6 与还原的 7 级。'
+  mode:'弹一条音阶，从选项里挑出它是哪个调式。\n左侧「听辨范围」按<b>母音阶体系</b>分组 —— 勾上哪一组，就把该体系的母音阶和它的全部子音阶（各个调式）一起放进题库。可以多选，也可以只勾一组死磕。\n重点听<b>特征音</b>：多利亚的大六度、弗里吉亚的 b2、利底亚的 #4、混合利底亚的 b7；和声 / 旋律小调体系还要留意 b6 与还原的 7 级。',
+  sight:sightHelp          /* 视奏的帮助文本要按当前定弦换谱表口径，所以是函数 */
 };
 
+/* 视奏练习的帮助文本：谱表跟定弦自动走，所以文案分两套。
+   共同的部分（卡八度判定、试听 / 显示音名、每题音符数）写在两套里字面一致。 */
+function sightHelp(){
+  const bass = isBassInst();
+  const tail = bass
+    ? '谱面画在<b>低音谱表</b>上，按<b>贝斯谱惯例高八度记谱</b>（谱上的音比实际发音高一个八度）；'
+      + '题目只在低音谱表的常用音域内走句（加线不超过 3 条）。'
+    : '谱面画在<b>高音谱表</b>上，按<b>吉他习惯高八度记谱</b>（谱上的音比实际发音高一个八度）；'
+      + '七声调式自动给调号。';
+  return '按左侧勾选的<b>母音阶组</b>随机出一条<b>五线谱视奏</b>题 —— 题目画在指板下方的'
+    + (bass ? '低音谱表' : '高音谱表') + '上，带调号与节奏。\n'
+    + '在指板上<b>按谱面顺序</b>把每个音点出来：点一下，<b>同音高的位置会全部亮起来</b>，'
+    + '顺便看清这个音在琴颈上的所有落点。\n'
+    + '判定<b>卡八度</b> —— 谱面写的是哪个音高就点出那个音高；同一个音高换个把位算对，点成别的八度算错。\n'
+    + '全部点完按「提交答案」；点错了按「撤回上一步」。卡住了可以「▶ 试听题目」，'
+    + '或者打开「☐ 显示音名」把音名标在谱下。\n'
+    + tail + '「每题音符数」在左侧自己定。';
+}
+/* 帮助文本：多数题型就是一段固定的话；视奏要按定弦换口径，所以允许是函数。 */
+function gameHelpText(){
+  const h = GAME_HELP[G.type];
+  return (typeof h === 'function') ? h() : h;
+}
 function gameOptsHTML(){
   const sel = (id, opts) => '<select class="inp" id="' + id + '">' + opts.map(o =>
     '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select>';
@@ -8214,6 +8269,7 @@ function gameOptsHTML(){
     + sel('optRange', [['0,12','0 – 12 品'], ['0,24','0 – 24 品'], ['0,5','0 – 5 品（简单）']]) + '</div>';
   if (G.type === 'intv') return '<div class="field"><label>音程范围</label>'
     + sel('optIntv', [['common','常见 6 个：m2 M2 m3 M3 P4 P5'], ['all','全部 11 个音程'], ['basic','基础 4 个：M2 m3 M3 P5']]) + '</div>';
+  if (G.type === 'sight') return sightGroupHTML();
   return modeGroupHTML();
 }
 /* 音阶听辨的范围：一行一个母音阶体系，勾选该组 = 把「母音阶 + 它的全部子音阶」一起加进题库 */
@@ -8248,9 +8304,825 @@ function setModeGroup(id, on){
   if (!on && i >= 0) a.splice(i, 1);
   setModeGroups(a);
 }
+const ST_CLEF_W = 2.43;
+/* 五线谱字形（第 52 轮）—— 由 _glyph52.py 从公有领域字形自动生成，勿手改。
+   单位 = 一个谱表间距。谱号：G 线 = y0、左边缘 = x0；
+   休止符与升降号：竖直中心 = y0、左边缘 = x0、高度恒为 1。
+   素材：Wikimedia Commons 的高音谱号 / 四分休止符 / 升号 / 降号（均为公有领域）。
+   下面几个常量是归一化时量出来的宽度与上下沿，再往下是内联的 path d。
+   ⚠ 注释必须写在第一条声明**之后** —— 写在前面会被回归脚本算进上一个老块。 */
+const ST_CLEF_UP = -4.303;
+const ST_CLEF_DN = 2.583;
+const ST_QREST_W = 0.351;
+const ST_SHARP_W = 0.308;
+const ST_FLAT_W = 0.388;
+const ST_NAT_W = 0.55;
+const ST_CLEF = "M1.382,-0.505C1.279,-0.476,1.185,-0.412,1.099,-0.313C1.013,-0.213,0.97,-0.103,0.97,0.015C0.97,0.09,0.996,0.174,1.045,0.264C1.094,0.356,1.169,0.422,1.265,0.464C1.297,0.471,1.312,0.488,1.312,0.511C1.312,0.52,1.301,0.528,1.272,0.535C1.118,0.496,0.991,0.413,0.892,0.29C0.794,0.164,0.743,0.022,0.74,-0.141C0.745,-0.315,0.798,-0.478,0.898,-0.627C0.999,-0.777,1.13,-0.884,1.289,-0.947L1.172,-1.548C0.911,-1.331,0.699,-1.106,0.535,-0.869C0.371,-0.633,0.286,-0.378,0.279,-0.102C0.283,0.022,0.308,0.142,0.356,0.257C0.403,0.374,0.474,0.479,0.569,0.576C0.76,0.767,1.009,0.867,1.312,0.877C1.416,0.87,1.526,0.852,1.644,0.821L1.382,-0.505M1.504,-0.522L1.768,0.781C2.029,0.676,2.159,0.447,2.159,0.098C2.144,-0.019,2.11,-0.124,2.052,-0.217C1.997,-0.312,1.922,-0.386,1.827,-0.44C1.732,-0.494,1.626,-0.522,1.504,-0.522M1.157,-2.283C1.213,-2.317,1.277,-2.376,1.346,-2.459C1.416,-2.54,1.483,-2.637,1.548,-2.745C1.614,-2.855,1.666,-2.967,1.705,-3.08C1.744,-3.192,1.763,-3.299,1.763,-3.397C1.763,-3.439,1.76,-3.482,1.751,-3.519C1.744,-3.58,1.726,-3.627,1.693,-3.66C1.661,-3.69,1.621,-3.707,1.57,-3.707C1.468,-3.707,1.377,-3.644,1.296,-3.519C1.233,-3.411,1.18,-3.282,1.143,-3.136C1.104,-2.989,1.082,-2.843,1.079,-2.696C1.087,-2.528,1.114,-2.391,1.157,-2.283M1.05,-2.185C0.974,-2.459,0.931,-2.738,0.923,-3.023C0.925,-3.206,0.943,-3.377,0.979,-3.536C1.013,-3.695,1.062,-3.832,1.126,-3.951C1.189,-4.069,1.262,-4.159,1.343,-4.22C1.416,-4.274,1.468,-4.303,1.497,-4.303C1.519,-4.303,1.538,-4.295,1.555,-4.279C1.572,-4.264,1.594,-4.239,1.621,-4.205C1.822,-3.919,1.924,-3.573,1.924,-3.17C1.924,-2.979,1.898,-2.793,1.848,-2.606C1.798,-2.422,1.726,-2.246,1.629,-2.081C1.531,-1.915,1.416,-1.771,1.282,-1.648L1.419,-0.981C1.494,-0.989,1.544,-0.996,1.573,-0.996C1.702,-0.996,1.817,-0.969,1.924,-0.914C2.03,-0.86,2.122,-0.787,2.196,-0.694C2.271,-0.603,2.329,-0.498,2.369,-0.379C2.408,-0.261,2.43,-0.137,2.43,-0.008C2.43,0.191,2.378,0.374,2.273,0.539C2.168,0.703,2.01,0.823,1.798,0.901C1.812,0.984,1.836,1.104,1.871,1.258C1.905,1.414,1.931,1.538,1.948,1.629C1.964,1.721,1.971,1.809,1.971,1.895C1.971,2.029,1.939,2.147,1.875,2.252C1.809,2.357,1.721,2.439,1.609,2.496C1.499,2.554,1.377,2.583,1.245,2.583C1.058,2.583,0.896,2.53,0.757,2.427C0.618,2.322,0.544,2.181,0.537,2.002C0.542,1.922,0.561,1.848,0.594,1.776C0.628,1.705,0.674,1.648,0.733,1.604C0.791,1.558,0.86,1.534,0.94,1.529C1.006,1.529,1.069,1.548,1.128,1.583C1.185,1.621,1.233,1.67,1.268,1.732C1.302,1.795,1.321,1.865,1.321,1.939C1.321,2.039,1.287,2.124,1.219,2.193C1.152,2.262,1.065,2.298,0.962,2.298L0.923,2.298C0.989,2.4,1.097,2.452,1.248,2.452C1.324,2.452,1.402,2.435,1.48,2.405C1.56,2.373,1.626,2.33,1.682,2.276C1.738,2.222,1.775,2.164,1.79,2.103C1.819,2.034,1.832,1.937,1.832,1.817C1.832,1.736,1.824,1.655,1.809,1.573C1.793,1.494,1.77,1.387,1.738,1.255C1.705,1.124,1.682,1.023,1.668,0.953C1.566,0.979,1.461,0.992,1.351,0.992C1.167,0.992,0.992,0.955,0.828,0.879C0.664,0.803,0.52,0.698,0.395,0.562C0.271,0.427,0.174,0.274,0.105,0.102C0.037,-0.069,0.002,-0.249,0,-0.435C0.007,-0.608,0.039,-0.774,0.1,-0.93C0.161,-1.087,0.239,-1.236,0.335,-1.375C0.432,-1.514,0.532,-1.641,0.635,-1.754C0.74,-1.866,0.877,-2.01,1.05,-2.185";
+const ST_QREST = "M0.351,-0.238C0.259,-0.129,0.213,-0.048,0.213,0.006C0.213,0.058,0.257,0.136,0.344,0.24L0.317,0.279C0.273,0.253,0.235,0.24,0.204,0.24C0.163,0.24,0.143,0.265,0.143,0.314C0.143,0.364,0.165,0.414,0.21,0.463L0.185,0.5C0.062,0.408,0,0.327,0,0.255C0,0.219,0.013,0.19,0.038,0.169C0.061,0.149,0.091,0.139,0.128,0.139C0.152,0.139,0.178,0.145,0.207,0.158L0.018,-0.094C0.108,-0.173,0.152,-0.244,0.152,-0.308C0.152,-0.359,0.122,-0.423,0.061,-0.5L0.136,-0.5L0.351,-0.238";
+const ST_SHARP = "M0.1,0.14L0.1,-0.108L0.206,-0.137L0.206,0.109L0.1,0.14M0.308,0.08L0.235,0.101L0.235,-0.146L0.308,-0.166L0.308,-0.268L0.235,-0.248L0.235,-0.5L0.206,-0.5L0.206,-0.241L0.1,-0.21L0.1,-0.455L0.072,-0.455L0.072,-0.201L0,-0.181L0,-0.078L0.072,-0.098L0.072,0.148L0,0.168L0,0.27L0.072,0.25L0.072,0.5L0.1,0.5L0.1,0.241L0.206,0.212L0.206,0.455L0.235,0.455L0.235,0.203L0.308,0.182L0.308,0.08";
+const ST_FLAT = "M0.248,0.144C0.248,0.188,0.231,0.231,0.186,0.288C0.138,0.348,0.097,0.382,0.043,0.423L0.043,0.159C0.056,0.128,0.073,0.103,0.097,0.084C0.121,0.065,0.145,0.055,0.169,0.055C0.21,0.055,0.235,0.078,0.246,0.124C0.247,0.127,0.248,0.134,0.248,0.144M0.242,-0.041C0.209,-0.041,0.175,-0.032,0.141,-0.013C0.107,0.005,0.074,0.03,0.043,0.06L0.043,-0.5L0,-0.5L0,0.459C0,0.486,0.007,0.5,0.022,0.5C0.031,0.5,0.041,0.493,0.057,0.483C0.102,0.457,0.13,0.439,0.161,0.42C0.195,0.398,0.234,0.373,0.286,0.324C0.322,0.288,0.348,0.252,0.364,0.215C0.38,0.179,0.388,0.143,0.388,0.107C0.388,0.054,0.373,0.016,0.345,-0.006C0.313,-0.029,0.279,-0.041,0.242,-0.041";
+const ST_NAT = "M0,-0.30h0.17v0.80H0zM0.38,-0.50h0.17v0.80H0.38zM0,-0.22h0.55v0.16H0zM0,0.06h0.55v0.16H0z";
+
+const ST_BCLEF_W = 3.152;
+/* 低音谱号（第 53 轮 · 贝斯视奏）—— 由 _glyph52b.py 从公有领域字形自动生成，勿手改。
+   素材：Wikimedia Commons 的 Bass_clef.svg（公有领域）。
+   单位 = 一个谱表间距；F 线（低音谱表第 4 线）= y0、左边缘 = x0。
+   定标：按「谱号两个点的中心距 = 一个谱表间距」重算 —— 素材原本整体缩小到 0.886 倍。 */
+const ST_BCLEF_UP = -1.094;
+const ST_BCLEF_DN = 2.549;
+const ST_BCLEF = "M0,2.449C0.302,2.245,0.527,2.09,0.672,1.983C0.818,1.878,0.97,1.746,1.127,1.59C1.284,1.433,1.415,1.255,1.522,1.059C1.606,0.914,1.679,0.745,1.738,0.554C1.798,0.365,1.828,0.182,1.834,0.008C1.834,-0.154,1.813,-0.309,1.769,-0.454C1.727,-0.601,1.654,-0.722,1.551,-0.819C1.448,-0.915,1.314,-0.962,1.148,-0.962C0.988,-0.962,0.837,-0.93,0.695,-0.867C0.556,-0.802,0.457,-0.699,0.401,-0.553C0.401,-0.54,0.394,-0.523,0.382,-0.498C0.386,-0.468,0.401,-0.445,0.43,-0.427C0.458,-0.41,0.483,-0.403,0.506,-0.403C0.518,-0.403,0.55,-0.408,0.6,-0.42C0.651,-0.431,0.693,-0.439,0.728,-0.439C0.829,-0.439,0.919,-0.403,1.001,-0.332C1.081,-0.261,1.121,-0.175,1.121,-0.074C1.121,-0.001,1.1,0.067,1.06,0.13C1.02,0.193,0.965,0.245,0.894,0.281C0.823,0.319,0.745,0.337,0.661,0.337C0.508,0.337,0.378,0.291,0.271,0.197C0.166,0.102,0.113,-0.019,0.113,-0.17C0.113,-0.362,0.172,-0.529,0.288,-0.67C0.407,-0.811,0.556,-0.916,0.739,-0.987C0.921,-1.06,1.104,-1.094,1.291,-1.094C1.496,-1.094,1.691,-1.043,1.872,-0.937C2.055,-0.834,2.199,-0.691,2.306,-0.513C2.413,-0.334,2.468,-0.143,2.468,0.064C2.468,0.43,2.346,0.77,2.101,1.085C1.857,1.401,1.555,1.674,1.194,1.907C0.953,2.065,0.564,2.279,0.027,2.549L0,2.449M2.653,-0.506C2.653,-0.574,2.678,-0.632,2.728,-0.678C2.776,-0.725,2.835,-0.748,2.905,-0.748C2.967,-0.748,3.024,-0.722,3.075,-0.67C3.127,-0.62,3.152,-0.561,3.152,-0.496C3.152,-0.427,3.125,-0.368,3.075,-0.32C3.022,-0.275,2.963,-0.252,2.896,-0.252C2.825,-0.252,2.768,-0.275,2.722,-0.326C2.676,-0.376,2.653,-0.435,2.653,-0.506M2.653,0.495C2.653,0.426,2.678,0.367,2.724,0.321C2.772,0.274,2.831,0.251,2.905,0.251C2.967,0.251,3.022,0.276,3.075,0.327C3.125,0.379,3.152,0.434,3.152,0.495C3.152,0.57,3.127,0.629,3.079,0.677C3.03,0.724,2.972,0.749,2.905,0.749C2.831,0.749,2.772,0.724,2.724,0.679C2.678,0.633,2.653,0.572,2.653,0.495";
+
+/* ============================================================
+   五线谱渲染（第 52 轮 · 视奏练习）
+   ------------------------------------------------------------
+   这一块只做一件事：把**已经算好的音符**画到谱表上。
+   画哪张谱表由 stStaffSVG(notes, {st}) 决定（STAFF_TREBLE / STAFF_BASS）；
+   本块不认识「吉他 / 贝斯」，也不认识「音阶 / 和弦 / 点音」—— 只认 ds / acc / dur / rest。
+   出题、判定、题板交互在下面「视奏练习」那一段，与本块彼此独立。
+
+   坐标单位：一个「谱表间距」= ST_SP 像素（相邻两条线之间的距离）。
+   y 轴向下为正，跟 SVG 一致。
+   谱位 ds：C0=0、D0=1、…、B0=6、C1=7…（字母序号 + 7×八度）。
+     高音谱表五条线：E4=30、G4=32、B4=34、D5=36、F5=38
+     低音谱表五条线：G2=18、B2=20、D3=22、F3=24、A3=26（都是 ST_TOP 往下按 2 递增）
+   ⚠ 记谱八度是**调用方**的事：吉他 / 贝斯都按各自的惯例把实发音高换算成谱面音高，
+     本块拿到 ds 就当它已经写好了。oct 见下面的声部配置。
+   ============================================================ */
+const ST_SP = 11;                 /* 一个谱表间距 —— 本块所有尺度都由它派生 */
+const ST_TOP = 30;                /* 五条线里最上面那条的 y（两种谱表共用） */
+/* 谱表配置（第 53 轮）—— 渲染器只认这张表，不认识「吉他 / 贝斯」。
+   二者**只有这三组数不同**：谱号与它的锚线、五线的谱位、调号里各记号落在哪个谱位。
+   其余（音符 / 符干 / 符尾 / 休止符 / 小节线的画法）两种谱表完全一样。
+   ⚠ 五条线必须落在**偶数**谱位上（奇数就是「间」，加线也落在偶数上）——
+     附点、加线、符干方向都靠这个前提，换谱表时别把这个性质弄丢。 */
+const STAFF_TREBLE = {
+  key:'treble', cn:'高音谱表',
+  clef:ST_CLEF, clefW:ST_CLEF_W, clefUp:ST_CLEF_UP, clefDn:ST_CLEF_DN,
+  anchor:32,                      /* 谱号锚线：G 线（第 2 线，G4） */
+  top:38, mid:34, bot:30,         /* 五线由上到下：F5 D5 B4 G4 E4 */
+  sharpDs:[38, 35, 39, 36, 33, 37],   /* 调号升号 F C G D A E 的谱位 */
+  flatDs:[34, 37, 33, 36, 32, 35]     /* 调号降号 B E A D G C 的谱位 */
+};
+const STAFF_BASS = {
+  key:'bass', cn:'低音谱表',
+  clef:ST_BCLEF, clefW:ST_BCLEF_W, clefUp:ST_BCLEF_UP, clefDn:ST_BCLEF_DN,
+  anchor:24,                      /* 谱号锚线：F 线（第 4 线，F3）—— F 谱号两点的中点 */
+  top:26, mid:22, bot:18,         /* 五线由上到下：A3 F3 D3 B2 G2 */
+  sharpDs:[24, 21, 25, 22, 19, 23],
+  flatDs:[20, 23, 19, 22, 18, 21]
+};
+const STAFFS = { treble:STAFF_TREBLE, bass:STAFF_BASS };
+/* 调号里升降号按这个字母顺序累积 —— 用来判断「某个字母在本调里已被调号改过没有」 */
+const ST_SHARP_L = [3, 0, 4, 1, 5, 2, 6];       /* F C G D A E B */
+const ST_FLAT_L  = [6, 2, 5, 1, 4, 0, 3];       /* B E A D G C F */
+const ST_ZOOM = 1.35;
+/* 谱面默认放大倍数。1 倍（1 px = 1 单位）画出来在题板里偏小，整体放大一点点；
+   只作用于 CSS 显示宽度，viewBox 与所有内部坐标不动 —— 窄窗口仍由 max-width:100% 兜。
+   全体同倍 → 音符大小跨题一致（短题不会巨大、长题不会很小）。 */
+
+/* 谱位 → y（ds 越大音越高、y 越小） */
+function stY(ds, st){ st = st || STAFF_TREBLE; return ST_TOP + (st.top - ds) * (ST_SP / 2); }
+/* 数值格式化：SVG 里别出现 30.500000000000004 这种尾巴 */
+function stN(v){ return Math.round(v * 100) / 100; }
+/* 升降号字形的宽度（单位 = 高度），高度按 1 归一化 */
+function stAccW(k){ return k > 0 ? ST_SHARP_W : (k < 0 ? ST_FLAT_W : ST_NAT_W); }
+function stAccD(k){ return k > 0 ? ST_SHARP : (k < 0 ? ST_FLAT : ST_NAT); }
+/* 一个升降号：k = +1 升号 / -1 降号 / 0 还原；height 单位 = 谱表间距 */
+function stAccSVG(k, x, ds, height, dy, st){
+  return '<path d="' + stAccD(k) + '" transform="translate(' + stN(x) + ',' + stN(stY(ds, st) + dy)
+       + ') scale(' + stN(height * ST_SP) + ')" style="fill:var(--text)"/>';
+}
+/* 一个升降记号的纵向墨迹范围：字形按高 1 归一化，纵向区间恒为 -0.5 .. 0.5。
+   画完记号要拿它报给 up()/dn() —— 记号比同谱位的符头更高，不报就会被 viewBox 裁。 */
+function stAccSpan(ds, height, dy, st){
+  const c = stY(ds, st) + (dy || 0), h = 0.5 * height * ST_SP;
+  return [c - h, c + h];
+}
+/* 符尾（八分音符的那一勾）。原点 = 符干末端，x 向右、y 向下；朝上的符干直接用，朝下的翻转 y。 */
+const ST_FLAG = 'M0,0C0.42,0.15,0.79,0.58,0.88,1.10C0.93,1.42,0.90,1.72,0.74,1.92'
+              + 'C0.62,1.46,0.36,0.80,0,0z';
+
+/* ------------------------------------------------------------
+   stStaffSVG(notes, o)
+   notes：按顺序排列的「谱面事件」数组，每项：
+     { dur: 时值（拍）, rest: true 表示休止符,
+       ds: 谱位, acc: 相对自然音级的升降数, L: 字母序号 0..6, name: 音名（用于标注）,
+       ok: true/false/null（判定结果，可缺）, done: true/false（已作答 → 灰显，可缺） }
+   o：{ sig: 调号（正=升号数，负=降号数）, tt: 拍号分子, tb: 拍号分母,
+        st: 画哪张谱表（STAFF_TREBLE / STAFF_BASS，缺省高音谱表）,
+        names: 是否在谱下标注音名, note: 若整题未开始作答可以传提示文本 }
+   返回一段 <svg> 字符串（宽度按内容定，外部用 max-width:100% 兜住）。
+   ------------------------------------------------------------ */
+/* 调号给出的「默认升降数」：某个字母在 sig 这个调号下本来该升还是该降 */
+function stImplied(sig, L){
+  return sig > 0
+    ? ((ST_SHARP_L.indexOf(L) >= 0 && ST_SHARP_L.indexOf(L) < sig) ? 1 : 0)
+    : sig < 0
+      ? ((ST_FLAT_L.indexOf(L) >= 0 && ST_FLAT_L.indexOf(L) < -sig) ? -1 : 0)
+      : 0;
+}
+function stStaffSVG(notes, o){
+  o = o || {};
+  const st = o.st || STAFF_TREBLE;       /* 画在哪张谱表上 */
+  const sig = o.sig || 0;
+  const tt = o.tt || 4, tb = o.tb || 4;
+  const per = tt * 2;                       /* 一小节折合多少个八分音符单位 */
+  const showNames = !!o.names;
+  const P = [];                             /* SVG 片段 */
+  const FILL = 'style="fill:var(--text)"';
+  const add = s => P.push(s);
+  /* 墨迹的上下沿：先按「五线 + 谱号自己的上下沿」给个底，画的过程里继续收。
+     clefUp 是负数（向上）；取 min/max 是为了让谱号伸出去的那部分也算进来 ——
+     高音谱号上下都伸出五线，低音谱号只向下、且底端仍在底线之内，两种都能各取所需。 */
+  const topOf    = Math.min(stY(st.top, st), stY(st.anchor, st) + st.clefUp * ST_SP);
+  const bottomOf = Math.max(stY(st.bot, st), stY(st.anchor, st) + st.clefDn * ST_SP);
+  let yTop = topOf - 0.4 * ST_SP;
+  let yBot = bottomOf + 1.0 * ST_SP;
+  const up = v => { if (v < yTop) yTop = v; };
+  const dn = v => { if (v > yBot) yBot = v; };
+
+  let x = 14;
+  /* 谱号：字形原点（高音谱号 = G 线、低音谱号 = F 线）对准锚线 */
+  add('<path d="' + st.clef + '" transform="translate(' + stN(x) + ',' + stN(stY(st.anchor, st))
+    + ') scale(' + ST_SP + ')" ' + FILL + '/>');
+  x += st.clefW * ST_SP + 0.7 * ST_SP;
+
+  /* 调号 */
+  if (sig){
+    const n = Math.min(6, Math.abs(sig)), dsA = sig > 0 ? st.sharpDs : st.flatDs;
+    for (let i = 0; i < n; i++){
+      const kdy = sig > 0 ? 0 : -0.2 * ST_SP;
+      add(stAccSVG(sig > 0 ? 1 : -1, x, dsA[i], 2.0, kdy, st));
+      const ksp = stAccSpan(dsA[i], 2.0, kdy, st);
+      up(ksp[0]); dn(ksp[1]);
+      x += 1.2 * ST_SP;
+    }
+    x += 0.4 * ST_SP;
+  }
+  /* 拍号：分子写在三线以上、分母写在三线以下（每个数字占上下各两个间） */
+  const tfs = 2.2 * ST_SP;
+  const tSty = 'style="fill:var(--text);font-family:inherit;font-weight:700;font-size:' + stN(tfs) + 'px"';
+  const tnY = stY(st.mid + 2.25, st) + 0.355 * tfs;   /* 分子的基线 */
+  const tdY = stY(st.mid - 2.25, st) + 0.355 * tfs;   /* 分母的基线 */
+  add('<text x="' + stN(x + 0.9 * ST_SP) + '" y="' + stN(tnY)
+    + '" text-anchor="middle" ' + tSty + '>' + tt + '</text>');
+  add('<text x="' + stN(x + 0.9 * ST_SP) + '" y="' + stN(tdY)
+    + '" text-anchor="middle" ' + tSty + '>' + tb + '</text>');
+  /* 拍号也是墨迹（数字高约 0.72 em，坐在基线上）—— 一并报给 up()/dn()。
+     高音谱表有谱号在上面兜着看不出来，低音谱表的谱号只向上伸 1.09 个间距，
+     不报就会让题板上沿贴着拍号走、DOM 里量出来「文字框越出 viewBox」。 */
+  up(Math.min(tnY, tdY) - 0.72 * tfs);
+  dn(Math.max(tnY, tdY) + 0.05 * tfs);
+  /* 第一个音可能要写临时记号，而记号画在符头**左边**（升/降号伸出去 12.87px、
+     还原号 24.97px）—— 不预留就会压在拍号上。这里按第一个音实际要不要记号来留。 */
+  let pad0 = 0;
+  for (let i = 0; i < notes.length; i++){
+    const n0 = notes[i];
+    if (n0.rest) continue;
+    if (n0.acc !== stImplied(sig, n0.L))
+      pad0 = stAccW(n0.acc) * 2.0 * ST_SP + 0.55 * ST_SP + 0.78 * ST_SP;
+    break;
+  }
+  x += 1.9 * ST_SP + pad0;
+
+  /* 音符与休止符 */
+  const accMem = {};                        /* 本小节里字母 → 已生效的升降数 */
+  let meas = 0;                             /* 本小节已走过多长（八分音符单位） */
+  const stepOf = d => ST_SP * (d >= 4 ? 5.0 : d >= 2 ? 4.6 : d >= 1.5 ? 4.3 : d >= 1 ? 4.0 : 3.6);
+
+  for (let i = 0; i < notes.length; i++){
+    const n = notes[i];
+    const sx = x, step = stepOf(n.dur);
+    x += step;
+
+    if (n.rest){                            /* ---- 休止符 ---- */
+      if (n.dur <= 1){
+        const h = 3.4 * ST_SP, w = ST_QREST_W * h;
+        add('<path d="' + ST_QREST + '" transform="translate(' + stN(sx - w / 2) + ',' + stN(stY(st.mid, st))
+          + ') scale(' + stN(h) + ')" ' + FILL + '/>');
+      } else {
+        const onMid = n.dur < 4;            /* 二分休止符坐在三线上；全休止符挂在四线下 */
+        const y = onMid ? stY(st.mid, st) - 0.5 * ST_SP : stY(st.mid + 2, st);
+        add('<rect x="' + stN(sx - 0.6 * ST_SP) + '" y="' + stN(y) + '" width="' + stN(1.2 * ST_SP)
+          + '" height="' + stN(0.5 * ST_SP) + '" ' + FILL + '/>');
+      }
+      up(stY(st.top, st)); dn(stY(st.mid, st) + 0.6 * ST_SP);
+    } else {                                /* ---- 音符 ---- */
+      n._x = sx;
+      const hollow = n.dur >= 2, wide = n.dur >= 4;
+      const rx = (wide ? 0.78 : 0.62) * ST_SP, ry = (wide ? 0.47 : 0.45) * ST_SP;
+      const cy = stY(n.ds, st);
+      const grey = n.done;
+      const col = grey ? 'var(--muted)' : 'var(--text)';
+
+      /* 加线：落在偶数谱位上的才是线 */
+      const led = [];
+      if (n.ds < st.bot){ for (let d = st.bot - 2; d >= (n.ds % 2 ? n.ds + 1 : n.ds); d -= 2) led.push(d); }
+      else if (n.ds > st.top){ for (let d = st.top + 2; d <= (n.ds % 2 ? n.ds - 1 : n.ds); d += 2) led.push(d); }
+      const hw = 0.95 * ST_SP;
+      led.forEach(d => {
+        const yy = stN(stY(d, st));
+        if (hollow){                        /* 空心符头要把加线断开（真谱就是这样） */
+          add('<line x1="' + stN(sx - hw) + '" y1="' + yy + '" x2="' + stN(sx - rx * 0.9)
+            + '" y2="' + yy + '" style="stroke:var(--text);stroke-width:1.15"/>');
+          add('<line x1="' + stN(sx + rx * 0.9) + '" y1="' + yy + '" x2="' + stN(sx + hw)
+            + '" y2="' + yy + '" style="stroke:var(--text);stroke-width:1.15"/>');
+        } else {
+          add('<line x1="' + stN(sx - hw) + '" y1="' + yy + '" x2="' + stN(sx + hw)
+            + '" y2="' + yy + '" style="stroke:var(--text);stroke-width:1.15"/>');
+        }
+        up(yy - 1); dn(yy + 1);
+      });
+
+      /* 符头：先描黑再按需要挖空（挖空用的是卡片底色 —— 谱表就画在卡片上） */
+      const rot = ' transform="rotate(-20 ' + stN(sx) + ' ' + stN(cy) + ')"';
+      add('<ellipse cx="' + stN(sx) + '" cy="' + stN(cy) + '" rx="' + stN(rx) + '" ry="' + stN(ry)
+        + '"' + rot + ' style="fill:' + col + '"/>');
+      if (hollow){
+        add('<ellipse cx="' + stN(sx) + '" cy="' + stN(cy) + '" rx="' + stN(rx * 0.58) + '" ry="'
+          + stN(ry * 0.42) + '"' + rot + ' style="fill:var(--panel)"/>');
+      }
+      up(cy - ry); dn(cy + ry);
+
+      /* 符干 + 符尾 */
+      if (!wide){
+        const stemUp = n.ds < st.mid;       /* 中线以下符干朝上，中线及以上朝下 */
+        const stemX = stN(sx + (stemUp ? 1 : -1) * rx * 0.82);
+        const y1 = stN(stemUp ? cy + ry * 0.55 : cy - ry * 0.55);
+        const y2 = stN(stemUp ? cy - 3.4 * ST_SP : cy + 3.4 * ST_SP);
+        add('<line x1="' + stemX + '" y1="' + y1 + '" x2="' + stemX + '" y2="' + y2
+          + '" style="stroke:' + col + ';stroke-width:1.35"/>');
+        if (stemUp) up(y2 - 1); else dn(y2 + 1);
+        if (n.dur <= 0.5){                  /* 八分音符：符干末端挂一勾 */
+          add('<path d="' + ST_FLAG + '" transform="translate(' + stemX + ',' + y2 + ') scale('
+            + ST_SP + ')' + (stemUp ? '' : ' scale(1,-1)') + '" style="fill:' + col + '"/>');
+          const fy = stemUp ? parseFloat(y2) + 2.0 * ST_SP : parseFloat(y2) - 2.0 * ST_SP;
+          if (stemUp) dn(fy + 1); else up(fy - 1);
+        }
+      }
+
+      /* 附点：一律落在「间」上（线位音符的附点抬到上一间） */
+      if (n.dur === 1.5 || n.dur === 3){
+        const dds = (n.ds % 2) ? n.ds : n.ds + 1;
+        add('<circle cx="' + stN(sx + rx + 0.62 * ST_SP) + '" cy="' + stN(stY(dds, st)) + '" r="'
+          + stN(0.17 * ST_SP) + '" style="fill:' + col + '"/>');
+      }
+
+      /* 临时记号：跟调号给出的「默认升降」比，不一样才写 */
+      const implied = stImplied(sig, n.L);
+      const cur = (accMem[n.L] === undefined) ? implied : accMem[n.L];
+      if (n.acc !== cur){
+        const w = stAccW(n.acc) * 2.0 * ST_SP;
+        const ady = n.acc < 0 ? -0.2 * ST_SP : 0;
+        add(stAccSVG(n.acc, sx - rx - 0.55 * ST_SP - w, n.ds, 2.0, ady, st));
+        const asp = stAccSpan(n.ds, 2.0, ady, st); /* 记号顶端可能比符头更高，画布要跟着长 */
+        up(asp[0]); dn(asp[1]);
+        accMem[n.L] = n.acc;
+      }
+    }
+
+    /* 小节线：走满一小节就在此处画一条，并把临时记号的作用清掉 */
+    meas += n.dur * 2;
+    if (meas >= per - 1e-6){
+      meas -= per;
+      if (meas < 1e-6 && i < notes.length - 1){
+        x += 0.7 * ST_SP;
+        add('<line x1="' + stN(x) + '" y1="' + stN(stY(st.top, st)) + '" x2="' + stN(x) + '" y2="'
+          + stN(stY(st.bot, st)) + '" style="stroke:var(--text);stroke-width:1.15"/>');
+        x += 0.7 * ST_SP;
+        for (const k in accMem) delete accMem[k];
+      }
+    }
+  }
+  /* 收尾小节线（细 + 粗） */
+  x += 0.5 * ST_SP;
+  add('<line x1="' + stN(x) + '" y1="' + stN(stY(st.top, st)) + '" x2="' + stN(x) + '" y2="'
+    + stN(stY(st.bot, st)) + '" style="stroke:var(--text);stroke-width:1.15"/>');
+  x += 0.42 * ST_SP;
+  add('<rect x="' + stN(x) + '" y="' + stN(stY(st.top, st)) + '" width="' + stN(0.42 * ST_SP)
+    + '" height="' + stN(4 * ST_SP) + '" style="fill:var(--text)"/>');
+
+  /* 谱表五条线 —— 宽度要等所有元素排完才知道，所以留占位符最后替换 */
+  add('__LINES__');
+
+  /* 谱下信息：音名与判定标记（标记行始终留位，免得提交后整块跳一下） */
+  const names = showNames ? notes.filter(n => !n.rest) : [];
+  const infoY = yBot + 0.55 * ST_SP + 0.95 * ST_SP;
+  const tf = 'font-family:inherit;font-weight:600;font-size:' + stN(0.98 * ST_SP) + 'px';
+  if (showNames){
+    names.forEach(n => {
+      add('<text x="' + stN(n._x) + '" y="' + stN(infoY) + '" text-anchor="middle" style="fill:var(--muted);'
+        + tf + '">' + n.name + '</text>');
+    });
+  }
+  const markY = infoY + (showNames ? 1.15 * ST_SP : 0);
+  notes.filter(n => !n.rest).forEach(n => {
+    if (n.ok === undefined || n.ok === null) return;
+    add('<text x="' + stN(n._x) + '" y="' + stN(markY) + '" text-anchor="middle" style="fill:'
+      + (n.ok ? 'var(--ok)' : 'var(--accent)') + ';' + tf + '">' + (n.ok ? '✓' : '✗') + '</text>');
+  });
+  yBot = markY + 0.35 * ST_SP;
+
+  const W = Math.ceil(x + 8), H = Math.ceil(yBot - yTop);
+  let lines = '';
+  for (let i = 0; i < 5; i++){
+    const ly = stN(stY(st.bot + 2 * i, st));    /* 由下往上画，与上一轮一致 */
+    lines += '<line x1="0" y1="' + ly + '" x2="' + stN(W) + '" y2="' + ly
+          + '" style="stroke:var(--border2);stroke-width:1.15"/>';
+  }
+  return '<svg class="staffsvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H
+    + '" style="width:' + Math.round(W * ST_ZOOM) + 'px;max-width:100%;height:auto;display:block"'
+    + ' xmlns="http://www.w3.org/2000/svg">'
+    + '<g transform="translate(0,' + stN(-yTop) + ')">'
+    + P.join('').replace('__LINES__', lines)
+    + '</g></svg>';
+}
+
+/* ---------- 视奏练习（第 52 轮） ----------
+   题目是**五线谱**：按勾选的母音阶组随机挑一条音阶 × 随机主音，在该调音阶音里走一条
+   带节奏的小句子，画成高音谱表；用户在指板上**按谱面顺序**点出这些音。
+
+   六条口径（要改的时候一起看）：
+   ① **判定卡八度**：谱面写的是哪个音高，就必须点出那个音高；同一个音高在别的位置点算对
+      （如 E4 用 1 弦空弦或 2 弦 5 品都行），但点成 E3 算错。
+   ② **题目只从「当前显示范围 + 弦组里点得出来的音」走句** —— 范围外的音根本没处点。
+   ③ **同音高全亮**：点指板上任一音时，同音高（含八度）的全部位置一起高亮。
+   ④ **谱面按吉他习惯高八度记谱**：实际发声音高 +12 才是谱面音高（ST_OCT）。
+   ⑤ **调号自动给**：音级集合能对上某个大调就给那个调号；对不上就按「临时记号最少」挑一个；
+      代价仍然太大（如全音音阶）就干脆不给调号，每个音自己写临时记号。
+   ⑥ 主音临时切到本题主音（与「音阶填空」同一套做法），答过的位置按本调音级着色；
+      但 showScale 必须保持 false —— 铺出音阶音等于把答案标出来。
+
+   ⚠ 常量 SIGHT_MIN/SIGHT_MAX/SIGHT_DEF 只在本块定义；`S` 的归一化比本块早执行
+      （那时常量还在 TDZ 里），所以那处的上下限是手写的字面量，改这里要一起改。 */
+const SIGHT_MIN = 3, SIGHT_MAX = 12, SIGHT_DEF = 5;
+const ST_OCT = 12;                  /* 吉他记谱：谱面音高 = 实际发声音高 + 12 */
+const ST_KEY = { 0:0, 7:1, 2:2, 9:3, 4:4, 11:5, 6:6, 5:-1, 10:-2, 3:-3, 8:-4, 1:-5 };
+
+function sightLen(){
+  const el = $('optSightLen');
+  const v = parseInt((el && el.value) || '', 10);
+  const cur = isNaN(v) ? (S.sightLen || SIGHT_DEF) : v;
+  return Math.min(SIGHT_MAX, Math.max(SIGHT_MIN, cur));
+}
+/* 设置面板：母音阶组（复用「音阶听辨」那套 egrid 卡片）+ 每题音符数 + 读谱辅助 */
+function sightGroupHTML(){
+  const on = S.sightGroups || [];
+  const cards = EAR_GROUPS.map(g => {
+    const list = earGroupList(g.id), p = earGroupParent(g.id), y = on.indexOf(g.id) >= 0;
+    return '<div class="eg' + (y ? ' on' : '') + '">'
+      + '<label class="chk"><input type="checkbox" class="sightg" value="' + g.id + '"'
+      + (y ? ' checked' : '') + '><span>' + g.cn + '</span>'
+      + '<span class="egn">' + list.length + ' 条</span></label>'
+      + '<div class="egl">' + list.map(s => (p && s.id === p.id) ? '<b>' + s.cn + '</b>' : s.cn).join(' · ')
+      + '</div></div>';
+  }).join('');
+  const n = earPool(on).length;
+  const cur = sightLen();
+  let selN = '<select class="inp" id="optSightLen">';
+  for (let i = SIGHT_MIN; i <= SIGHT_MAX; i++)
+    selN += '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>'
+          + i + ' 个音' + (i === SIGHT_DEF ? '（默认）' : '') + '</option>';
+  selN += '</select>';
+  return '<div class="field"><label>出题范围（按母音阶组 · 勾哪组就把该组全部音阶放进题库）</label>'
+    + '<div class="egrid">' + cards + '</div>'
+    + '<div class="tip" style="margin-top:9px">已选 <b>' + on.length + '</b> 组 · 共 <b>' + n
+    + '</b> 条音阶' + (n < 4 ? '　　建议至少勾两组，题目才够变' : '') + '</div>'
+    + '<div style="display:flex; gap:8px; margin-top:8px">'
+    + '<button class="btn ghost sm" id="sightAllBtn">全选</button>'
+    + '<button class="btn ghost sm" id="sightMajBtn">只留自然大调体系</button>'
+    + '</div></div>'
+    + '<div class="field"><label>每题音符数</label>' + selN
+    + '<div class="tip" style="margin-top:6px">题目音在音阶音里走句，允许出现重复音'
+    + '（相邻两步不撞同一个音）；节奏随机，句尾会有休止符收住。</div></div>'
+    + '<div class="field"><label>读谱辅助</label>'
+    + '<label class="chk"><input type="checkbox" id="optSightNames"' + (S.sightNames ? ' checked' : '')
+    + '><span>谱面下标注音名</span></label>'
+    + '<div class="tip" style="margin-top:6px">'
+    + (isBassInst()
+        ? '谱面画在<b>低音谱表</b>上，按<b>贝斯谱惯例高八度记谱</b>（谱上的音比实际发音高一个八度）；'
+          + '题目只在低音谱表的常用音域内走句（加线不超过 3 条）。'
+        : '谱面画在<b>高音谱表</b>上，按<b>吉他习惯高八度记谱</b>（谱上的音比实际发音高一个八度）；')
+    + '七声调式自动给调号，其余音阶按「临时记号最少」挑调号，实在不合适就不给调号。'
+    + '「▶ 试听题目」在题板下方。</div></div>';
+}
+function setSightGroups(ids){
+  S.sightGroups = (ids && ids.length) ? ids.slice() : ['major'];
+  save(); renderGameOpts();
+}
+function setSightGroup(id, on){
+  const a = (S.sightGroups || []).slice(), i = a.indexOf(id);
+  if (on && i < 0) a.push(id);
+  if (!on && i >= 0) a.splice(i, 1);
+  setSightGroups(a);
+}
+function setSightNames(on){
+  S.sightNames = !!on;
+  save();
+  if (G.type === 'sight') renderTrain();
+}
+
+/* ---------------- 拼写与调号 ----------------
+   音高类 pc 写成字母 L（0=C…6=B）时的升降数：先把差归约到 0..11 再折到 -6..6，
+   d=12 只会归约成 0 —— 不会再出现「d === 12 不折返」那种拼出 B# 的坑。 */
+function sightAcc(pc, L){
+  let d = (((pc - LETPC[L]) % 12) + 12) % 12;
+  if (d > 6) d -= 12;
+  return d;
+}
+/* 不在调内的音：在 7 个字母里挑「升降数最小」的写法（三升降以上不要），
+   同分时按 flatPref 决定用降号还是升号（想要 C# 还是 Db）。
+   ⚠ 不能只找「半音邻居的字母」—— 自然音级（G 这类）的 ±1 半音都不是自然字母，
+     那样会落到兜底写法、给出一个错的字母（曾把 G 写成 C 再补五个降号）。 */
+function sightAlt(pc, flatPref){
+  let b = null;
+  for (let L = 0; L < 7; L++){
+    const a = sightAcc(pc, L);
+    if (Math.abs(a) > 2) continue;
+    const rank = Math.abs(a) * 10 + (flatPref ? (a <= 0 ? 0 : 1) : (a >= 0 ? 0 : 1));
+    if (!b || rank < b.rank) b = { rank:rank, L:L, acc:a };
+  }
+  return b ? { L:b.L, acc:b.acc } : { L:0, acc:0 };
+}
+/* 某大调的音级字母表：pc → { L, acc }。sig > 0 用升号写，sig < 0 用降号写。 */
+function sightMajorLetters(r, sig){
+  const flat = sig < 0;
+  const rn = (r === 6) ? (flat ? 'Gb' : 'F#') : nameOf(r, flat);
+  const li = LETTERS.indexOf(rn.charAt(0));
+  const out = {};
+  [0, 2, 4, 5, 7, 9, 11].forEach((iv, k) => {
+    const pc = (((r + iv) % 12) + 12) % 12, L = (li + k) % 7;
+    out[pc] = { L:L, acc:sightAcc(pc, L) };
+  });
+  return out;
+}
+/* 挑调号 + 定拼写。
+   候选 = 12 个大调（= 全部 15 个调号，F# / Gb 那一格两种写法都试）。
+   代价 = 需要写临时记号的音符数 + 0.5 × 不属于该调的音高类数 + 0.02 × 调号大小。
+   并列时：主音相同 > 关系大调（小三度）> 其余。代价都太大就放弃调号。 */
+function sightKey(sc, rootPc){
+  const pcs = sc.iv.map(iv => (((rootPc + iv) % 12) + 12) % 12);
+  const flatPref0 = !!(S.flats || sc.preferFlat);
+  /* 七声音阶：字母按音级逐个发（这样和声小调升高的七级会写成 C#，而不是 Db） */
+  let own = null;
+  if (sc.iv.length === 7){
+    const li = LETTERS.indexOf(nameOf(rootPc, flatPref0).charAt(0));
+    if (li >= 0){
+      own = {};
+      sc.iv.forEach((iv, k) => {
+        const pc = pcs[k], L = (li + k) % 7, a = sightAcc(pc, L);
+        if (Math.abs(a) <= 2) own[pc] = { L:L, acc:a };
+      });
+      if (Object.keys(own).length !== 7) own = null;
+    }
+  }
+  let best = null;
+  for (let r = 0; r < 12; r++){
+    const signs = (r === 6) ? [1, -1] : [(ST_KEY[r] >= 0 ? 1 : -1)];
+    signs.forEach(sgn => {
+      const sig = (r === 6) ? 6 * sgn : ST_KEY[r];
+      const cls = sightMajorLetters(r, sig);
+      const inK = {};
+      [0, 2, 4, 5, 7, 9, 11].forEach(iv => inK[(((r + iv) % 12) + 12) % 12] = 1);
+      const letters = {};
+      let chro = 0, out = 0;
+      pcs.forEach(pc => {
+        const sp = inK[pc] ? cls[pc] : sightAlt(pc, sig < 0 || (sig === 0 && flatPref0));
+        letters[pc] = sp;
+        if (!inK[pc]) out++;
+        const implied = sig > 0
+          ? ((ST_SHARP_L.indexOf(sp.L) >= 0 && ST_SHARP_L.indexOf(sp.L) < sig) ? 1 : 0)
+          : sig < 0
+            ? ((ST_FLAT_L.indexOf(sp.L) >= 0 && ST_FLAT_L.indexOf(sp.L) < -sig) ? -1 : 0)
+            : 0;
+        if (sp.acc !== implied) chro++;
+      });
+      const d = (((r - rootPc) % 12) + 12) % 12;
+      const rank = (d === 0) ? 0 : (d === 3) ? 1 : (d === 9) ? 2 : 3;
+      const cost = chro + 0.5 * out + 0.02 * Math.abs(sig) + 0.001 * rank;
+      if (!best || cost < best.cost) best = { cost:cost, sig:sig, letters:letters, r:r };
+    });
+  }
+  /* 代价还这么大 → 这套音阶本来就没有合适的调，一律写临时记号 */
+  if (best && best.cost < 3) return { sig:best.sig, letters: own || best.letters };
+  const fb = {};
+  pcs.forEach(pc => {
+    const nm = nameOf(pc, flatPref0), L = LETTERS.indexOf(nm.charAt(0));
+    fb[pc] = { L:(L >= 0 ? L : 0), acc:sightAcc(pc, L >= 0 ? L : 0) };
+  });
+  return { sig:0, letters:fb };
+}
+/* 实发音高 → 谱面音符：{ L, acc, oct, ds }。letters 缺这个音高类时兜底用通用音名。
+   oct = 记谱八度偏移：谱面音高 = 实发音高 + oct。**属于声部**（见 SIGHT_VOICE），
+   不传就用 ST_OCT 的旧值 —— 吉他 / 贝斯都按各自惯例高八度记谱，但口径各写各的。 */
+function sightWritten(midi, letters, octShift){
+  const W = midi + (octShift === undefined ? ST_OCT : octShift), pc = (((W % 12) + 12) % 12);
+  let sp = letters ? letters[pc] : null;
+  if (!sp){
+    const nm = nameOf(pc, S.flats), L = LETTERS.indexOf(nm.charAt(0));
+    sp = { L:(L >= 0 ? L : 0), acc:sightAcc(pc, L >= 0 ? L : 0) };
+  }
+  const oct = Math.round((W - LETPC[sp.L]) / 12) - 1;
+  return { L:sp.L, acc:W - (LETPC[sp.L] + 12 * (oct + 1)), oct:oct, ds:sp.L + 7 * oct };
+}
+function sightWName(midi, letters, octShift){
+  const w = sightWritten(midi, letters, octShift);
+  return LETTERS[w.L] + (w.acc > 0 ? '#'.repeat(w.acc) : w.acc < 0 ? 'b'.repeat(-w.acc) : '') + w.oct;
+}
+
+/* ---------------- 出题 ---------------- */
+/* 当前「显示范围 + 弦组」里真实存在的位置（与 positionsOfPc 同一口径：范围不含 0 品时不算空弦） */
+function sightPositions(){
+  const t = tuning(), N = t.mid.length, sg = stringGroup(), out = [];
+  const lo = S.rangeStart, hi = S.rangeStart + S.rangeCount - 1;
+  for (let s = 0; s < N; s++){
+    if (!inStringGroup(s, N, sg)) continue;
+    for (let f = lo; f <= hi; f++){
+      if (f === 0 && lo !== 0) continue;
+      const midi = t.mid[s] + f;
+      out.push({ s:s, f:f, pc:(((midi % 12) + 12) % 12), midi:midi });
+    }
+  }
+  return out;
+}
+/* 节奏槽位：一小节折合 per 个八分音符单位。
+   PAT  = 中途小节用的节奏型（允许八分音符）；
+   PATE = 收尾小节用的节奏型（**不准出现八分**）—— 因为音符用完后剩下的槽位要变成休止符，
+          而八分休止符本轮不做（只做四分 / 二分 / 全休止）。 */
+const SIGHT_PAT  = {
+  8: [[2,2,2,2], [4,2,2], [2,4,2], [2,2,4], [3,3,2], [2,3,3], [1,1,2,2,2], [3,2,3], [4,4], [2,2,2,2]],
+  6: [[2,2,2], [4,2], [2,4], [3,3], [1,1,2,2], [2,2,2], [2,2,2]]
+};
+const SIGHT_PATE = {
+  8: [[8], [4,4], [4,2,2], [2,4,2], [2,2,4], [2,2,2,2]],
+  6: [[4,2], [2,4], [2,2,2]]
+};
+
+/* ---------------- 视奏声部（第 53 轮） ----------------
+   一个「声部」= 谱表 + 记谱八度 + 音域窗。出题内核只认这三样，
+   所以「吉他视奏」与「贝斯视奏」在代码里就是下面两行配置的差别。
+   win = 音域窗（谱位 ds 的闭区间，null = 不限）；按**谱位**而不是实际音高来限，
+   因为要控制的量是「谱面会拖出几条加线」，而同一段实际音高落在两张谱表上的加线数不同。
+   ref = 「起音靠主音或五度」那一步拿哪个八度来比「近」。 */
+const SIGHT_VOICE = {
+  guitar:{
+    key:'guitar', cn:'吉他视奏',
+    staff:STAFF_TREBLE,                /* 高音谱表（G 谱号） */
+    oct:12,                            /* 谱面 = 发声 + 12 */
+    win:null,                          /* 不限：高音谱表本来就覆盖吉他的记谱音域 */
+    ref:60
+  },
+  bass:{
+    key:'bass', cn:'贝斯视奏',
+    staff:STAFF_BASS,                  /* 低音谱表（F 谱号） */
+    oct:12,                            /* 谱面 = 发声 + 12 —— 贝斯谱的通行惯例 */
+    /* 低音谱表加线 ≤ 3 条 ⇒ 谱位 12–32。换算成发声：谱位 12 = A1(谱面) → 实际 A0，
+       谱位 32 = G4(谱面) → 实际 G3。真正的下限由定弦决定（4 弦 E1、5 弦 B0），
+       上限 G3 落在 G 弦 12 品。出窗的音不进梯子 —— 跟指板范围直走的话，
+       24 品会拖出七八条加线，贝斯谱就没法读了。 */
+    win:[12, 32],
+    ref:40                             /* 低把位中部（E1–G2 这一段） */
+  }
+};
+function sightVoice(){ return isBassInst() ? SIGHT_VOICE.bass : SIGHT_VOICE.guitar; }
+/* ---------------- 出题 ----------------
+   内核收一个「视奏声部」v：吉他 / 贝斯共用走句、节奏槽位、拼写与调号，
+   三处不同（谱表 / 记谱八度 / 音域窗）全在 SIGHT_VOICE 里，不在这里写 if。 */
+function sightMake(len, v){
+  const pool = earPool(S.sightGroups);
+  const sc = scaleById(pick(pool.length ? pool : earPool(['major'])));
+  const rootPc = pick(NATURAL);
+  const ky = sightKey(sc, rootPc);
+  const pos = sightPositions();
+  /* 音域窗按谱位判 —— 窗要管的是「谱面会拖出几条加线」，那才是要控制的量 */
+  const dsOf  = mid => sightWritten(mid, ky.letters, v.oct).ds;
+  const inWin = mid => !v.win || (dsOf(mid) >= v.win[0] && dsOf(mid) <= v.win[1]);
+  /* 梯子 = 这段范围里「属于本题音阶」且落在音域窗内的音高，升序 */
+  const inSet = {};
+  sc.iv.forEach(iv => inSet[(((rootPc + iv) % 12) + 12) % 12] = 1);
+  let lad = [];
+  pos.forEach(p => { if (inSet[p.pc] && inWin(p.midi) && lad.indexOf(p.midi) < 0) lad.push(p.midi); });
+  lad.sort((a, b) => a - b);
+  /* 范围窄到音阶音凑不够三个 → 退化成「这段范围里能点到的音」；
+     仍然不许出窗（谱面出界比少一个音严重），题至少做得出来。 */
+  let narrow = false;
+  if (lad.length < 3){
+    narrow = true; lad = [];
+    pos.forEach(p => { if (inWin(p.midi) && lad.indexOf(p.midi) < 0) lad.push(p.midi); });
+    lad.sort((a, b) => a - b);
+  }
+  if (lad.length < 1) return null;
+  const L = lad.length;
+  let i = Math.min(L - 1, Math.floor(L * (0.35 + Math.random() * 0.3)));
+  const seq = [lad[i]];
+  let dir = Math.random() < 0.5 ? 1 : -1;
+  for (let k = 1; k < len; k++){
+    const st = (Math.random() < 0.75 ? 1 : 2) * dir;      /* 级进为主，偶尔跳进 */
+    let j = i + st;
+    /* 出界、或跑出起始音上下 7 个半音（旋律音域）→ 掉头 */
+    if (j < 0 || j >= L || lad[j] > seq[0] + 7 || lad[j] < seq[0] - 7){
+      dir = -dir; j = i + dir * Math.abs(st);
+    }
+    if (j < 0 || j >= L) j = i;
+    i = j; seq.push(lad[i]);
+  }
+  /* 收得住：起音尽量落在主音或五度音上，末音尽量回主音。
+     ref = 拿哪个八度来比「近」：吉他 60（中音区）、贝斯 40（低把位中部）。
+     音域差得远时这一条自动让位（下面的 ±7 判断），不会把音硬拽过去。 */
+  const ref = v.ref || 60;
+  const near = (pc, r0) => {
+    let b = null, bd = 99;
+    lad.forEach(m => {
+      if ((((m % 12) + 12) % 12) !== pc) return;
+      const d = Math.abs(m - r0);
+      if (d < bd){ bd = d; b = m; }
+    });
+    return b;
+  };
+  const t5 = near((((rootPc + 7) % 12) + 12) % 12, ref);
+  if (t5 !== null && Math.abs(t5 - seq[0]) <= 7) seq[0] = t5;
+  const t1 = near(rootPc, seq[len - 1]);
+  if (t1 !== null && len > 1 && Math.abs(t1 - seq[len - 2]) <= 7) seq[len - 1] = t1;
+  else if (t1 !== null && len === 1) seq[0] = t1;
+
+  /* 铺节奏槽位：一小节一小节铺满，前 len 个槽位放音符，剩下的槽位变休止符 */
+  const tt = Math.random() < 0.72 ? 4 : 3, tb = 4, per = tt * 2;
+  const slots = [];
+  let need = len, guard = 0;
+  while (need > 0 && guard++ < 40){
+    let pat;
+    if (need <= 3){
+      const cand = SIGHT_PATE[per].filter(p => p.length >= need && p.length <= need + 1);
+      pat = cand.length ? pick(cand) : SIGHT_PATE[per][0];
+    } else {
+      pat = pick(SIGHT_PAT[per]);
+    }
+    pat.forEach((u, k) => slots.push({ u:u, rest: k >= need }));
+    need = Math.max(0, need - pat.length);
+  }
+  const items = [], notes = [];
+  let k = 0;
+  slots.forEach(sl => {
+    if (sl.rest){ items.push({ dur:sl.u / 2, rest:true }); return; }
+    const midi = seq[k++];
+    const w = sightWritten(midi, ky.letters, v.oct);
+    const it = { dur:sl.u / 2, ds:w.ds, acc:w.acc, L:w.L, midi:midi,
+                 name:sightWName(midi, ky.letters, v.oct) };
+    items.push(it); notes.push(it);
+  });
+  return { v:v, staff:v.staff, sc:sc, rootPc:rootPc, sig:ky.sig, letters:ky.letters,
+           tt:tt, tb:tb, items:items, notes:notes, ask:seq.slice(), narrow:narrow };
+}
+/* 吉他视奏出题（第 52 轮）：高音谱表 + 不设音域窗。
+   题目在「当前指板范围」里属于本题音阶的音高中走句。 */
+function sightAsk(len){ return sightMake(len, SIGHT_VOICE.guitar); }
+/* 贝斯视奏出题（第 53 轮）
+   ------------------------------------------------------------
+   与吉他视奏共用走句、节奏槽位、拼写与调号那几套工具；本块只交代贝斯特有的三件事：
+     1. 谱表 = **低音谱表**（F 谱号，五线 G2 B2 D3 F3 A3）—— 贝斯不用高音谱表。
+     2. 记谱 = **发声 + 12** —— 贝斯谱的通行惯例：low E 发声中是 E1，
+        谱上写在低音谱表下加一线的 E2 位置。（与吉他的高八度记谱是同一件事，各写各的。）
+     3. 音域窗 = **低音谱表加线不超过 3 条**，即谱位 12–32：
+        谱位 12 = A1 谱面 → 实际 A0；谱位 32 = G4 谱面 → 实际 G3。
+        真正的下限由定弦决定（4 弦 E1、5 弦 B0），上限 G3 = G 弦 12 品。
+   三条都在 SIGHT_VOICE.bass 里；这里只是贝斯那一侧的入口。 */
+function bassSightAsk(len){ return sightMake(len, SIGHT_VOICE.bass); }
+
+/* ---------------- 题板 ---------------- */
+function sightTipText(){
+  const r = G.round;
+  if (!r) return '';
+  if (r.tip) return r.tip;
+  if (r.bad.length) return '有 ' + r.bad.length + ' 个音不对（谱面上打了红叉）—— 撤回改一下再提交。';
+  if (r.ans.length >= r.ask.length) return '点满了 · 按「提交答案」判定。';
+  return '还差 ' + (r.ask.length - r.ans.length) + ' 个音 · 判定卡八度（同一个音高换个把位算对）。';
+}
+function sightTip(msg){
+  const r = G.round; if (r) r.tip = msg || null;
+  const el = $('sightTip'); if (el) el.textContent = sightTipText();
+}
+function sightBoxRender(){
+  const box = $('sightBox'); if (!box) return;
+  const r = G.round;
+  if (G.type !== 'sight' || !r || r.kind !== 'sight'){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  r.notes.forEach((n, i) => { n.done = (i < r.ans.length); });
+  const staff = stStaffSVG(r.items, { sig:r.sig, tt:r.tt, tb:r.tb, names:!!S.sightNames,
+                                      st:r.staff });
+  const bad = r.bad || [];
+  const ans = r.ans.length
+    ? r.ans.map((x, i) => '<span class="sbchip'
+        + (bad.indexOf(i) >= 0 ? ' bad' : (i === r.ans.length - 1 ? ' cur' : '')) + '"><i>'
+        + (i + 1) + '</i>' + x.nm + '</span>').join('')
+    : '<span class="tip">还没点音 —— 在指板上按谱面顺序点出这些音。</span>';
+  const narrow = r.narrow
+    ? '<div class="tip" style="margin-top:4px">当前指板范围'
+      + (r.voice === 'bass' ? '（再算上低音谱表的常用音域）' : '')
+      + '装不下整条音阶：题目只在这段范围里点得出来的音中走句。</div>'
+    : '';
+  box.style.display = '';
+  box.innerHTML =
+      '<div class="sbrow"><span class="sblab">题目</span><div class="staffwrap">' + staff + '</div></div>'
+    + narrow
+    + '<div class="sbrow"><span class="sblab">你的作答</span><span class="sbseq">' + ans + '</span></div>'
+    + '<div class="sbrow sbfoot">'
+    +   '<button class="btn sm" id="sightUndoBtn"' + (r.ans.length ? '' : ' disabled') + '>↶ 撤回上一步</button>'
+    +   '<button class="btn ghost sm" id="sightClearBtn"' + (r.ans.length ? '' : ' disabled') + '>清空作答</button>'
+    +   '<button class="btn ghost sm" id="sightPlayBtn">▶ 试听题目</button>'
+    +   '<button class="btn ghost sm" id="sightNameBtn">' + (S.sightNames ? '☑' : '☐') + ' 显示音名</button>'
+    +   '<button class="btn primary sm" id="sightGoBtn">✅ 提交答案</button>'
+    +   '<span style="flex:1 1 auto"></span>'
+    +   '<span class="tip" id="sightTip">' + sightTipText() + '</span>'
+    + '</div>';
+}
+/* 「点一个音 → 同音高（含八度）的位置全亮」。
+   ⚠ 走**渲染后打类**，不动共用的 neckSVG：那是探索页共用的大函数，为这一处不值得；
+     而且 renderTrain 每次都重建 innerHTML，类与写进去的 stroke 一起消失，不必反向清理。
+     环色用该音高类的专用色 --pkN（与点音反查同一套），「同音」这件事一眼能对上。 */
+function sightPaintSame(){
+  const box = $('fbTrain'); if (!box) return;
+  const r = G.round;
+  const m = (r && r.kind === 'sight' && r.hl !== null && r.hl !== undefined) ? r.hl : -1;
+  const gs = box.querySelectorAll('g.note[data-midi]');
+  for (let i = 0; i < gs.length; i++){
+    const g = gs[i], c = g.querySelector('circle.nc');
+    const on = (m >= 0 && parseInt(g.dataset.midi, 10) === m);
+    g.classList.toggle('same', on);
+    if (!c) continue;
+    if (c.dataset.oS === undefined){ c.dataset.oS = c.style.stroke; c.dataset.oW = c.style.strokeWidth; }
+    c.style.stroke = on ? ('var(--pk' + (((m % 12) + 12) % 12) + ')') : c.dataset.oS;
+    c.style.strokeWidth = on ? '3.4' : c.dataset.oW;
+  }
+}
+function sightAfterRender(){
+  sightBoxRender();
+  if (G.type === 'sight') sightPaintSame();
+}
+function sightUndo(){
+  const r = G.round;
+  if (!G.running || !r || r.kind !== 'sight' || !r.ans.length) return;
+  r.ans.pop();
+  r.bad = []; r.tip = null;
+  r.notes.forEach(n => { n.ok = null; });
+  const last = r.ans[r.ans.length - 1];
+  r.hl = last ? last.midi : null;
+  renderTrain(); updateProg();
+}
+function sightClear(){
+  const r = G.round;
+  if (!G.running || !r || r.kind !== 'sight' || !r.ans.length) return;
+  r.ans.length = 0; r.bad = []; r.tip = null; r.hl = null;
+  r.notes.forEach(n => { n.ok = null; });
+  renderTrain(); updateProg();
+}
+/* 试听：按题目的节奏把这一串音弹一遍（会暴露答案，所以要按钮点才响） */
+function sightPlay(){
+  const r = G.round;
+  if (!r || r.kind !== 'sight') return;
+  stopRaw();
+  const beat = 470;                       /* 每拍毫秒数 */
+  let t = 0;
+  r.items.forEach(it => {
+    if (!it.rest){
+      const m = it.midi, d = it.dur * beat * 0.9;
+      rawTimers.push(setTimeout(() => playMidi(m, d / 1000, 0.24), t));
+    }
+    t += it.dur * beat;
+  });
+}
+/* 提交判定：逐位比**音高**（含八度）。没点满不判（先提示还差几个）。
+   全对 → 加分 + 连击 → 交给 finishRound 自动进下一题；
+   有错 → 谱面打红叉、扣分、连击归零，**停在本题**让用户撤回改正。 */
+function sightSubmit(){
+  const r = G.round;
+  if (!G.running || !r || r.kind !== 'sight' || G.awaiting) return;
+  if (r.ans.length < r.ask.length){
+    sightTip('还差 ' + (r.ask.length - r.ans.length) + ' 个音 —— 点满才好判定。');
+    return;
+  }
+  const bad = [];
+  r.ans.forEach((x, i) => {
+    const ok = (x.midi === r.ask[i]);
+    if (r.notes[i]) r.notes[i].ok = ok;
+    if (!ok) bad.push(i);
+  });
+  r.bad = bad;
+  if (!bad.length){
+    G.good++; G.streak++; G.maxStreak = Math.max(G.maxStreak, G.streak);
+    G.score += 10 + Math.min(10, G.streak);
+    r.tip = '全部正确 · ' + r.ask.length + ' / ' + r.ask.length;
+    renderTrain(); paintStats();
+    finishRound('视奏全部正确！');
+    return;
+  }
+  G.wrong++; G.streak = 0; G.score = Math.max(0, G.score - 6);
+  r.tip = '有 ' + bad.length + ' 个音不对（谱面红叉）—— 撤回改一下再提交。';
+  renderTrain(); paintStats();
+}
+
+
 function renderGameOpts(){
   $('gameOpts').innerHTML = '<div class="card-t"><h3>练习设置</h3></div>' + gameOptsHTML();
-  $('gameHelp').innerHTML = GAME_HELP[G.type].replace(/\n/g, '<br>');
+  $('gameHelp').innerHTML = gameHelpText().replace(/\n/g, '<br>');
 }
 
 /* ---------- 音符池 ---------- */
@@ -8326,6 +9198,41 @@ function newRound(){
     setPrompt('找出所有 <em>' + sharpName(pc) + '</em> 音',
       '在指板上点出它的全部位置 · 共 ' + exp.length + ' 个', 0, exp.length);
     showChoices([]);
+  }
+
+  else if (G.type === 'sight'){
+    /* 谱表跟定弦自动走：吉他 → 高音谱表，贝斯 → 低音谱表（第 53 轮） */
+    const v = sightVoice();
+    const q = v.key === 'bass' ? bassSightAsk(sightLen()) : sightAsk(sightLen());
+    if (!q){
+      /* 极端情况：当前范围里一个位置都没有（弦组或品段被收得极窄）—— 说清楚，不硬出题 */
+      G.round = { kind:'sight', staff:v.staff, voice:v.key,
+                  sc:scaleById('major'), rootPc:0, sig:0, letters:{},
+                  tt:4, tb:4, items:[], notes:[], ask:[], ans:[], hl:null, bad:[],
+                  tip:'当前指板范围里一个音都点不到 —— 把范围或弦组放宽一点再开始。',
+                  reveal:null, showScale:false, total:0, narrow:true, savedRoot:S.root };
+      setPrompt('视奏练习', '先把指板范围放宽一些', 0, 1);
+      showChoices([]);
+    } else {
+      const r = {
+        kind:'sight', staff:q.staff, voice:q.v.key,
+        sc:q.sc, rootPc:q.rootPc, sig:q.sig, letters:q.letters,
+        tt:q.tt, tb:q.tb, items:q.items, notes:q.notes, ask:q.ask,
+        ans:[], hl:null, bad:[], tip:null, reveal:null,
+        showScale:false, total:q.notes.length, narrow:q.narrow,
+        /* 与「音阶填空」同一套做法：临时把全局主音切到本题主音，只为着色与音级名
+           （答过的位置画 DEGCOLOR + 音级名，主音不对就会写成错的音级）。
+           ⚠ showScale 全程 false —— 铺出音阶音等于把答案标出来。 */
+        savedRoot:S.root
+      };
+      r.reveal = n => r.ans.some(x => x.s === n.s && x.f === n.f);
+      G.round = r;
+      S.root = q.rootPc; $('rootSel').value = q.rootPc;
+      setPrompt('<em>' + nameOf(q.rootPc, S.flats) + '</em> ' + q.sc.cn,
+        '按谱面顺序点出 ' + q.notes.length + ' 个音 · 判定卡八度（同音高换位置算对）',
+        0, q.notes.length);
+      showChoices([]);
+    }
   }
 
   else if (G.type === 'fill'){
@@ -8420,6 +9327,7 @@ function updateProg(){
   const r = G.round; if (!r) return;
   const cur = r.kind === 'find' ? r.found.size
     : r.kind === 'fill' ? r.revealed.size
+    : r.kind === 'sight' ? r.ans.length
     : (G.awaiting ? 1 : 0);
   const tot = r.total || 1;
   $('progTxt').textContent = cur + ' / ' + tot;
@@ -8450,6 +9358,8 @@ function renderTrain(){
       return null;
     }) : null
   });
+  /* 视奏练习：题板与「同音高全亮」都在这里收尾（都依赖刚重建的 DOM） */
+  sightAfterRender();
 }
 
 /* ---------- 判定 ---------- */
@@ -8474,6 +9384,27 @@ function trainClick(s, f, pc, midi){
       if (r.revealed.size === r.hidden.size){ finishRound('音阶补全！'); return; }
     } else if (r.set.has(pc)){ playMidi(midi); return; }
     else { miss(s, f, midi); return; }
+  }
+  else if (r.kind === 'sight'){
+    if (r.ans.length >= r.ask.length){
+      playMidi(midi);
+      r.tip = '已经点满 ' + r.ask.length + ' 个音 —— 先提交，或者撤回一个再点。';
+      renderTrain();
+      return;
+    }
+    /* 按**位置**有序记录，不做集合去重：题目里同一个音可以出现两次。
+       nm 是「这个位置在谱面上该读成什么音名」——与谱下标注同一套写法。 */
+    /* 作答里显示的音名跟谱面标注同一套写法（谱面音名）= 实发 + 声部的记谱八度，
+       所以这里必须把声部的 oct 显式传进去，不能靠 sightWritten 的兜底默认值 ——
+       今天两种声部恰好都是 +12，兜底掩盖不了错；换个八度口径就露馅了。 */
+    r.ans.push({ s:s, f:f, pc:pc, midi:midi,
+                 nm:sightWName(midi, r.letters,
+                               (SIGHT_VOICE[r.voice] || SIGHT_VOICE.guitar).oct) });
+    r.hl = midi; r.bad = []; r.tip = null;
+    r.notes.forEach(n => { n.ok = null; });   /* 上一轮的判对判错标记作废 */
+    playMidi(midi);
+    renderTrain(); paintStats(); updateProg();
+    return;
   }
   else { playMidi(midi); return; }
   renderTrain(); paintStats(); updateProg();
@@ -9668,7 +10599,13 @@ function bind(){
   $('tuningSel').onchange = e => {
     S.tuning = e.target.value;
     extFormCache = {};                       /* 弦数 / 定弦变了，低弦扩展缓存作废 */
-    fillStringSel(); refreshAll(); renderTrain();
+    fillStringSel(); refreshAll();
+    /* 视奏题画在哪张谱表由定弦决定（吉他 → 高音谱表，贝斯 → 低音谱表）：
+       乐器族一变，旧题的音在新定弦上可能根本点不出来 —— 直接换一题，别让用户对着
+       一道点不出的题较劲。同一族内换定弦（4 弦 ↔ 5 弦）不影响谱表，保持当前题。 */
+    if (G.type === 'sight' && G.round && G.round.kind === 'sight'
+        && G.round.voice !== (isBassInst() ? 'bass' : 'guitar')) newRound();
+    renderTrain();
     syncChordQualOptions();
     if ($('page-caged').classList.contains('on'))   renderCaged();
     if ($('page-arp').classList.contains('on'))     renderArp();
@@ -9790,11 +10727,26 @@ function bind(){
   $('gameOpts').addEventListener('change', e => {
     const n = e.target;
     if (n && n.classList && n.classList.contains('modeg')) setModeGroup(n.value, n.checked);
+    if (n && n.classList && n.classList.contains('sightg')) setSightGroup(n.value, n.checked);
+    if (n && n.id === 'optSightLen'){ S.sightLen = sightLen(); save(); }
+    if (n && n.id === 'optSightNames') setSightNames(n.checked);
   });
   $('gameOpts').addEventListener('click', e => {
     if (!e.target || !e.target.id) return;
     if (e.target.id === 'modeAllBtn') setModeGroups(EAR_GROUPS.map(g => g.id));
     if (e.target.id === 'modeMajBtn') setModeGroups(['major']);
+    if (e.target.id === 'sightAllBtn') setSightGroups(EAR_GROUPS.map(g => g.id));
+    if (e.target.id === 'sightMajBtn') setSightGroups(['major']);
+  });
+  /* 视奏题板：每次重绘都换一批新按钮，监听挂在容器上才不会丢 */
+  $('sightBox').addEventListener('click', e => {
+    const b = (e.target && e.target.closest) ? e.target.closest('button') : null;
+    if (!b) return;
+    if (b.id === 'sightUndoBtn')  sightUndo();
+    if (b.id === 'sightClearBtn') sightClear();
+    if (b.id === 'sightGoBtn')    sightSubmit();
+    if (b.id === 'sightPlayBtn')  sightPlay();
+    if (b.id === 'sightNameBtn')  setSightNames(!S.sightNames);
   });
 
   /* 音阶库 */
@@ -11142,6 +12094,93 @@ function gmcPanelHTML(pcs){
 }
 
 /* ---------- 和弦查询总入口 ---------- */
+const CQ_IV12 = [
+  /* 两音形态（第 50 轮）——
+     点出**只有两个音**时，信息量只够说清「这两个音的音程关系」，这张表就管这件事：
+     下标 = 从低音往上数的半音数（0..11），en = 国际缩写；
+     反过来从高音数上去的那条读数 = CQ_IV12[(12 - iv) % 12]。
+     ⚠ 与 INTERVALS 是**两张表**，不要合并：INTERVALS 的成员就是「音程听辨」模式的
+       选项清单（改它会连带改那个功能），这里只需要文字名，且必须补齐 0 与 11 两端。 */
+  { cn:'纯一度', en:'P1' },                            /* 两个音高类不同，走不到这里 */
+  { cn:'小二度', en:'m2' },
+  { cn:'大二度', en:'M2' },
+  { cn:'小三度', en:'m3' },
+  { cn:'大三度', en:'M3' },
+  { cn:'纯四度', en:'P4' },
+  { cn:'三全音', en:'TT', also:'等音读法：增四度 / 减五度' },
+  { cn:'纯五度', en:'P5' },
+  { cn:'小六度', en:'m6' },
+  { cn:'大六度', en:'M6' },
+  { cn:'小七度', en:'m7' },
+  { cn:'大七度', en:'M7' }
+];
+/* 构成音**天生只有两个**的和弦，通用标记里只有一个 —— 五和弦（强力和弦 `X5`：根音 + 纯五度）。
+   两种摆法都算同一个和弦，所以下面这一对音程都要认：
+     7 半音（纯五度）→ 原位 `X5`    （低音就是根音）
+     5 半音（纯四度）→ 转位 `X5/Y`  （低音是五度、根音在上）
+   其余音程不硬安名字 —— 理由写在 cqTwoHTML 的「特殊和弦」分支里。 */
+const CQ_TWO_POW = [5, 7];
+
+/* ---------- 只有两个音时的那一块（第 50 轮） ----------
+   只在 pcs.length === 2 时被调用（见 cqResults 的第二个分支）。
+   两条都要**各自明确写出来**，不互相顶替：
+     ① 音程关系标识 —— 低音 → 高音，给出音程名 + 缩写 + 半音数，再给出反过来的读数；
+     ② 特殊和弦     —— 低音到高音是纯五度 / 纯四度时，这两个音**本身就是一个五和弦**，
+                        这时把和弦名一并写出；认不出两音和弦就写「不适用」并说明为什么。
+   ⚠ 方向必须按**实际音高**定（pickLow = 已选里 midi 最低的位置），与斜线和弦同口径：
+     「五度在低、根音在上」是转位，要写成 `X5/Y`，不能倒过来说成另一个调的原位和弦。 */
+function cqTwoHTML(pcs){
+  const MODE_CN = { coarse:'粗匹配', degree:'音级匹配', diatonic:'调内和弦' };
+  const bass = pickLow();
+  const lo = bass ? bass.pc : -1;
+  const hi = pcs.filter(x => x !== lo)[0];
+  const iv = (((hi - lo) % 12) + 12) % 12;
+  const A = CQ_IV12[iv], B = CQ_IV12[(12 - iv) % 12];
+  const nm = pc => nameOf(pc, S.flats);
+
+  /* ① 音程关系标识（两个音一定有，哪个音程都写） */
+  let h = '<div class="mres"><div class="mh"><span class="tag">音程关系</span>'
+        + '<span class="nm">' + nm(lo) + ' → ' + nm(hi) + '</span>'
+        + '<span class="dsc">' + A.cn + '（' + A.en + '）</span></div>'
+        + '<div class="why">'
+        + '从低音 <b>' + nm(lo) + '</b> 数上去：<b>' + A.cn + '</b>（' + A.en + '）· '
+        + iv + ' 个半音' + (A.also ? ' · ' + A.also : '')
+        + '<br>反过来从 <b>' + nm(hi) + '</b> 数上去：<b>' + B.cn + '</b>（' + B.en + '）· '
+        + ((12 - iv) % 12) + ' 个半音 —— 同一对音的两种读数（互为转位）'
+        + '<br>低音取实际音高最低的那个位置：' + nm(lo) + '（第 '
+        + stringNo(bass.s, tuning().mid.length) + ' 弦 ' + bass.f + ' 品）'
+        + '</div></div>';
+
+  /* ② 特殊和弦：通用标记里有名字的两音和弦只有五和弦 */
+  h += '<div class="mres"><div class="mh"><span class="tag">特殊和弦</span>';
+  if (CQ_TWO_POW.indexOf(iv) >= 0){
+    const root = (iv === 7) ? lo : hi;                 /* 转位时根音在上面那颗音 */
+    const sym  = nm(root) + '5' + (iv === 5 ? '/' + nm(lo) : '');
+    h += '<span class="nm">' + sym + '</span>'
+      +  '<span class="dsc">五和弦（强力和弦）· ' + (iv === 7 ? '原位' : '转位') + '</span></div>'
+      +  '<div class="why">构成音<b>只有两个</b> —— 根音 <b>' + nm(root) + '</b> + 纯五度 <b>'
+      +  nm(((root + 7) % 12 + 12) % 12) + '</b>。'
+      +  (iv === 7
+          ? '低音就是根音，按原位写 <b>' + sym + '</b>。'
+          : '现在低音是五度、根音在上面那颗音，按转位写 <b>' + sym + '</b>。')
+      +  '上一条的音程标识同样成立 —— 同一对音，一条说音程、一条说和弦名。'
+      +  '</div>';
+  } else {
+    h += '<span class="dsc">不适用</span></div>'
+      +  '<div class="why">这两个音是 <b>' + A.cn + '</b>（' + iv + ' 个半音），'
+      +  '而构成音只有两个的和弦，在通用标记里只有一个 —— <b>五和弦</b>'
+      +  '（强力和弦 <b>X5</b>，根音 + 纯五度，也就是 7 个半音）。'
+      +  '所以这一对音凑不出两音和弦名，这里不硬安一个。'
+      +  '</div>';
+  }
+  h += '</div>';
+
+  h += '<div class="tip" style="margin-top:4px">两个音只够定住音程关系 —— '
+     + '再点一个音（凑满 <b>3</b> 个）才进「' + (MODE_CN[CQ.mode] || '粗匹配') + '」。'
+     + '</div>';
+  return h;
+}
+
 function cqMatchHTML(pcs){
   const bass = pickLow();
   let h = '<div class="tip" style="margin-bottom:11px">点出的音：'
@@ -11322,15 +12361,27 @@ function sqMatchHTML(pcs){
 function cqResults(){
   const el = $('cqResult'); if (!el) return;
   const pcs = pickPcs(), need = 3, hid = pickHidden();
-  if (pcs.length < need){
+  /* 音高类只有两个时走**另一条路**（第 50 轮）：和弦匹配的信息量不够，
+     但「这两个音是什么音程、是不是一个两音和弦」已经能说清了 —— 见 cqTwoHTML。
+     三个音起才是原来的粗匹配 / 音级匹配 / 调内和弦。 */
+  if (pcs.length < 2){
     /* 「位置数」与「音高类数」是两回事 —— 同一个音在两个把位各点一下只算一个音。
        不把这句说清楚，用户会以为「明明点了 3 下怎么还说不够」。 */
     el.innerHTML = '<div class="tip">还差 <b>' + (need - pcs.length) + ' 个音</b> —— 现在点上 '
       + QF.sel.length + ' 个位置、凑出 ' + pcs.length + ' 个不同的音'
       + (QF.sel.length > pcs.length ? '（同一个音换把位点，只算一个音）' : '')
       + (hid ? '；其中 ' + hid + ' 处不在当前显示范围里，仍然算数（左侧已标出）' : '')
-      + '。</div>';
+      + '。' + (pcs.length === 1
+          ? '点满 <b>2</b> 个音可以先看这两颗音的<b>音程关系</b>。' : '') + '</div>';
     $('cqResHint').textContent = pcs.length + ' / ' + need + ' 音';
+    CQ_LAST = null;
+    return;
+  }
+  if (pcs.length === 2){
+    /* 只有两个音：不给和弦匹配，只给音程关系 + 两音和弦判定 */
+    el.innerHTML = cqTwoHTML(pcs);
+    CQ_LAST = null;
+    $('cqResHint').textContent = '2 个音 · 音程关系';
     return;
   }
   el.innerHTML = cqMatchHTML(pcs);

@@ -46,7 +46,7 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | Tab | What it does |
 |---|---|
 | 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio |
-| 🧠 **Practice** | "Find the note" — tap *every* position of a named pitch; "Scale ear training" — identify a mode by ear, drilled in 8 parent-scale families |
+| 🧠 **Practice** | Six drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, and **staff sight reading** — the prompt is notated on a staff with key signature and rhythm, and you tap the notes in order on the neck. The staff follows the tuning; see the next section |
 | 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
 | 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key |
 | 🧮 **Scale & Harmony** | Seven degrees × five chord-tone extension layers; click any cell to jump to its shape |
@@ -56,8 +56,38 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | 🔍 **Improvisation Lookup** | Given a chord quality and key, list usable scales, arpeggios and substitutions |
 | 🎹 **Voicing** | Treat the whole progression as one object and search for the lowest total hand travel; returns several distinct optima |
 | 🖐 **2-1-2 Arpeggios** | Arpeggio shapes built on a `2-1-2` notes-per-string alternation, starting from the 6th / 5th / 4th / 3rd string |
-| 🎯 **Chord Lookup** | The other direction: tap notes on the neck (3 or more) to **name the chord**. Coarse / degree-aware / diatonic modes; a non-root bass becomes a slash chord; when nothing fits, it falls back to the five trichord families (root removed, six notes split into two groups of three) |
+| 🎯 **Chord Lookup** | The other direction: tap notes on the neck (3 or more) to **name the chord**; tap exactly two notes and it names their **interval** and checks whether they form a power chord (`X5`). Coarse / degree-aware / diatonic modes; a non-root bass becomes a slash chord; when nothing fits, it falls back to the five trichord families (root removed, six notes split into two groups of three) |
 | 🎼 **Scale Lookup** | Tap notes on the neck (5 or more) to **find the scale**. All 82 scales × 12 tonics = 984 readings, layered by "how many notes you are still missing". Every reading of the same pitch-class set is listed side by side — which is why a seven-note scale can only ever be pinned down to its **parent-scale group** |
+
+## Read the staff, find it on the neck: staff sight reading
+
+The **sixth drill** in Practice. The prompt is not text but a real **staff excerpt**: key signature and
+rhythm included — note values, stems, flags, dots, rests and a final barline are all notated properly.
+Read it, then tap the matching notes **in order** on the neck.
+
+| Sight reading · guitar (treble staff) | Sight reading · 4-string bass (bass staff) |
+|---|---|
+| ![treble staff](screenshots/08-sight-reading-guitar-staff.png) | ![bass staff](screenshots/09-sight-reading-bass-clef.png) |
+
+- **The staff follows the tuning.** Guitar (including all open tunings) → **treble staff**;
+  4-string EADG / 5-string BEADG bass → **bass staff** (F clef). No switch to flip: changing tuning
+  within the same family keeps the current question, **crossing families deals a new one**.
+- **Notated per instrument convention.** Guitar sounds an octave below the written pitch; bass is
+  written an octave up in the same spirit (low E sounds E1, written on the ledger line below the bass
+  staff). The note-name hint shows the **written** names.
+- **The question is always playable.** Notes are chosen only from scale tones inside the currently
+  tappable range. For bass the range is clipped to **at most three ledger lines**
+  (roughly sounding A0–G3) — running the full 24 frets would drag out seven or eight ledger lines.
+- **Tap once, every position of that pitch lights up** (ring colour per pitch class, the same 12-colour
+  set as the chord lookup), so you see every place that note lives on the neck.
+- **Judging is octave-exact.** The written pitch is what you must tap: the same pitch in another
+  position counts (open 1st string and 5th fret 2nd string are both E4), another octave does not.
+  All correct → next question and a point; any wrong → those notes get a red cross, minus 6, and you
+  stay on the question to undo and resubmit.
+- **Reading aids**: **▶ play the prompt** (sounds the written pitches in order; rests take time but stay
+  silent) and **☐ show note names** under the staff.
+- A live answer row records what you tapped, with **↶ undo** and **clear**; note count per question is
+  yours to pick (3–12, default 5).
 
 ## Data
 
@@ -78,7 +108,7 @@ All counts are produced by the page's own runtime — they are not marketing cop
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **11,388 lines / 769 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **12,439 lines / 833 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
