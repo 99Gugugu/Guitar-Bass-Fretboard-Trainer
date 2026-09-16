@@ -33,6 +33,7 @@ _shot*.html
 _shot*.png
 _test.html
 *.log
+*.bak*
 
 # ---- 编辑器 / 系统 ----
 .vscode/

@@ -72,6 +72,30 @@
   --string:#6d7787; --fret:#3b4350; --nut:#e8e3da;
   --dot:#39404b; --ring:rgba(255,255,255,.22);
 }
+
+/* ---------- 点音配色（第 48 轮） ----------
+   已点的音按**音高类**上色：12 个音各一色。色相按**五度圈**顺序排
+   （C→G→D→A→E→B→F#…），于是五度圈上挨着的两个音色相相差 30°，
+   连 E/F、B/C 这种半音邻居也能一眼分开。
+   明度按色相的感知亮度分档（黄绿系最亮 → 压到 34%，蓝系最暗 → 提到 46%），
+   让 12 个色块都刚好压得住白字。两套主题**共用**这一套色 —— 深底上同样清楚。 */
+:root{
+  --pk0:hsl(0,66%,45%);    --pk1:hsl(210,66%,46%);  --pk2:hsl(60,66%,34%);
+  --pk3:hsl(270,66%,46%);  --pk4:hsl(120,66%,36%);  --pk5:hsl(330,66%,43%);
+  --pk6:hsl(180,66%,34%);  --pk7:hsl(30,66%,44%);   --pk8:hsl(240,66%,46%);
+  --pk9:hsl(90,66%,34%);   --pk10:hsl(300,66%,43%); --pk11:hsl(150,66%,34%);
+}
+/* 低音不再抢颜色 —— 颜色归音高类，低音改用**外面一圈虚线环**标（形状编码）。 */
+.selrow .pk{width:12px; height:12px; border-radius:50%; flex:0 0 auto; display:block}
+.selrow .poss{font-size:11px; color:var(--muted); flex:1 1 auto; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-family:ui-monospace,Menlo,monospace}
+.selrow .ooo{font-size:10px; font-weight:700; color:var(--warn); flex:0 0 auto;
+  border:1px solid var(--warn); border-radius:5px; padding:0 4px}
+.selrow .x{flex:0 0 auto; width:20px; height:20px; padding:0; border-radius:6px;
+  font-size:13px; line-height:1; color:var(--muted)}
+.selrow .x:hover{background:var(--accent); color:#fff}
+
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
@@ -201,6 +225,10 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
   font-family:inherit; font-weight:600}
 .ctone{font-size:13px; line-height:1.95; color:var(--text); margin-top:11px; padding:10px 13px;
   background:var(--panel2); border-left:3px solid var(--accent2); border-radius:0 8px 8px 0}
+/* Bebop 音阶的指型说明（第 43 轮）——与色彩正文区分开，单独一条 */
+.bnote{font-size:12.5px; line-height:1.9; color:var(--text2); margin-top:11px; padding:10px 13px;
+  background:var(--panel2); border-left:3px solid var(--accent); border-radius:0 8px 8px 0}
+.bnote b{color:var(--text)}
 .cref{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px}
 .cref li{font-size:12.5px; color:var(--text2); line-height:1.55; padding-left:14px; position:relative}
 .cref li:before{content:"\266a"; position:absolute; left:0; top:1px; color:var(--accent2); font-size:10px}
@@ -265,6 +293,51 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
 .blk.on{border-color:var(--accent2); background:rgba(37,99,235,.1)}
 .blk i{width:10px; height:10px; border-radius:3px; display:block}
 .blk small{font-weight:600; color:var(--muted); font-size:10.5px}
+/* ---------- 点音反查（第 47 轮：和弦查询 / 音阶查询） ---------- */
+.picknote{cursor:pointer}
+.picknote .pc{transition:transform .1s ease; transform-box:fill-box; transform-origin:center}
+.picknote:hover .pc{transform:scale(1.16)}
+.picknote .pn{font-size:8.6px; font-weight:700; pointer-events:none; user-select:none}
+.sellist{display:flex; flex-direction:column; gap:6px}
+.selrow{display:flex; align-items:center; gap:8px; padding:5px 9px; border:1px solid var(--border);
+  border-radius:8px; background:var(--panel2)}
+.selrow .nm{font-weight:800; font-size:13px; min-width:36px; color:var(--text)}
+.selrow .ps{font-size:11px; color:var(--muted); font-family:ui-monospace,Menlo,monospace}
+.selrow .bas{font-size:10px; font-weight:700; color:#fff; background:var(--accent); border-radius:5px; padding:1px 5px}
+.selrow select{margin-left:auto; width:auto; min-width:126px; font-size:12px; padding:3px 6px}
+.mres{margin-bottom:12px}
+.mres .mh{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.mres .mh .nm{font-size:15px; font-weight:800; color:var(--text); font-family:ui-monospace,Menlo,monospace}
+.mres .mh .tag{font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;
+  background:rgba(37,99,235,.12); border:1px solid rgba(99,132,235,.4); color:var(--accent2)}
+.mres .mh .dsc{font-size:12.5px; color:var(--text2)}
+.mres .why{font-size:11.5px; color:var(--muted); line-height:1.75; margin-top:3px}
+.mres .bar{height:6px; border-radius:4px; background:var(--panel3); overflow:hidden; margin-top:5px}
+.mres .bar i{display:block; height:100%; background:var(--accent2); border-radius:4px}
+.mreslist{display:flex; flex-direction:column; gap:9px}
+.gmc{margin-top:11px; padding:11px 13px; border-radius:0 8px 8px 0; background:var(--panel2);
+  border-left:3px solid var(--warn); font-size:12.5px; line-height:1.85; color:var(--text2)}
+.gmc b{color:var(--text)}
+.gmc .fams{display:flex; flex-wrap:wrap; gap:6px; margin:7px 0 2px}
+.gmc .fam{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:7px;
+  background:var(--panel); border:1px solid var(--border2); color:var(--text2)}
+.gmc .fam.hit{border-color:var(--warn); color:var(--warn); background:rgba(217,119,6,.1)}
+.gmc .pr li{margin:2px 0}
+.gmc .pr{list-style:none; margin:5px 0 0; padding:0; font-size:12px}
+.gmc .pr li:before{content:"· "; color:var(--warn); font-weight:800}
+/* 音阶查询：同一组音的读法 + 对称徽标 */
+.sqsec{font-size:12px; font-weight:700; color:var(--text2); margin:14px 0 8px;
+  padding-bottom:4px; border-bottom:1px dashed var(--border2)}
+.sqsec b{color:var(--accent2); margin:0 4px}
+.sqset{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+.sqset button{font-family:inherit; font-size:11.5px; font-weight:700; padding:3px 9px;
+  border-radius:7px; border:1px solid var(--border2); background:var(--panel);
+  color:var(--text2); cursor:pointer}
+.sqset button:hover{border-color:var(--accent2); color:var(--accent2)}
+.sqset button.on{border-color:var(--accent); color:#fff; background:var(--accent)}
+.sqset .more{font-size:11.5px; color:var(--muted); align-self:center}
+.mres .mh .sym{font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px;
+  background:rgba(217,119,6,.1); border:1px solid var(--warn); color:var(--warn)}
 .chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
 .chip{font-size:11px; font-weight:650; padding:2px 8px; border-radius:6px;
   background:var(--panel2); border:1px solid var(--border); color:var(--text2);
@@ -587,6 +660,8 @@ body{padding-bottom:74px}
   <button class="tab" data-page="query" data-page-node-id="QueryTabBtn">🔍 即兴查询表</button>
   <button class="tab" data-page="voicing" data-page-node-id="VoicingTabBtn">🎹 和弦配置</button>
   <button class="tab" data-page="tm212" data-page-node-id="Tm212TabBtn">🖐 2-1-2 琶音</button>
+  <button class="tab" data-page="chord" data-page-node-id="ChordTabBtn">🎯 和弦查询</button>
+  <button class="tab" data-page="scale" data-page-node-id="ScaleTabBtn">🎼 音阶查询</button>
 </div>
 
 <div class="wrap" data-page-node-id="ZI5DCNFlCEFNGEr48FAdqB">
@@ -1152,6 +1227,147 @@ body{padding-bottom:74px}
     </div>
   </section>
 
+  <!-- ========== 和弦查询（在指板上点音，反推和弦） ========== -->
+  <section class="page" id="page-chord" data-page-node-id="PageChordQuery">
+    <div class="layout" data-page-node-id="CqLayout">
+      <div data-page-node-id="CqLeft">
+        <div class="card" data-page-node-id="CqCard1">
+          <div class="card-t"><h3>匹配方式</h3><span class="hint">最少 3 个音</span></div>
+          <div class="field">
+            <label>模式</label>
+            <div class="seg mini" id="cqModeSeg" data-page-node-id="CqModeSeg">
+              <button data-v="coarse" class="on" data-page-node-id="CqModeCoarse">粗匹配</button>
+              <button data-v="degree" data-page-node-id="CqModeDegree">音级匹配</button>
+              <button data-v="diatonic" data-page-node-id="CqModeDia">调内和弦</button>
+            </div>
+          </div>
+          <div class="tip" id="cqModeTip" data-page-node-id="CqModeTip"></div>
+        </div>
+
+        <div class="card" id="cqDiaCard" style="display:none" data-page-node-id="CqDiaCard">
+          <div class="card-t"><h3>调内和弦</h3><span class="hint">先说清「在哪个母音阶下」</span></div>
+          <div class="field">
+            <label>体系</label>
+            <select class="inp" id="cqDiaGroup" data-page-node-id="CqDiaGroup"></select>
+          </div>
+          <div class="field">
+            <label>母音阶</label>
+            <select class="inp" id="cqDiaScale" data-page-node-id="CqDiaScale"></select>
+          </div>
+          <div class="field">
+            <label>主音</label>
+            <select class="inp" id="cqDiaRoot" data-page-node-id="CqDiaRoot"></select>
+          </div>
+          <div class="tip" id="cqDiaInfo" data-page-node-id="CqDiaInfo"></div>
+        </div>
+
+        <div class="card" data-page-node-id="CqCard2">
+          <div class="card-t"><h3>指板</h3></div>
+          <div class="field">
+            <label>显示范围</label>
+            <select class="inp" id="cqRange" data-page-node-id="CqRange"></select>
+          </div>
+          <div class="field">
+            <label>弦组</label>
+            <select class="inp" id="cqStrings" data-page-node-id="CqStrings"></select>
+          </div>
+          <label class="chk" data-page-node-id="CqAccChk"><input type="checkbox" id="cqAcc" class="hidden" data-page-node-id="CqAcc"><span class="sw"></span>使用降号记谱</label>
+        </div>
+
+        <div class="card" data-page-node-id="CqCard3">
+          <div class="card-t"><h3>已选音</h3><span class="hint" id="cqSelCnt" data-page-node-id="CqSelCnt"></span></div>
+          <div id="cqSelList" data-page-node-id="CqSelList"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="cqUndo" data-page-node-id="CqUndo">撤销一个</button>
+            <button class="btn sm" id="cqClear" data-page-node-id="CqClear">全部清空</button>
+          </div>
+        </div>
+      </div>
+
+      <div data-page-node-id="CqRight">
+        <div class="fb-tools" data-page-node-id="CqTools">
+          <button class="btn primary" id="cqPlay" data-page-node-id="CqPlay">▶ 试听已选音</button>
+          <span class="tip">在指板上点音 —— 再点一次取消</span>
+          <div class="spacer"></div>
+          <span class="tip" id="cqTip" data-page-node-id="CqTip"></span>
+        </div>
+        <div class="card" style="padding:12px" data-page-node-id="CqCard4">
+          <div class="fb-stage" id="fbPickChord" data-page-node-id="FbPickChord"></div>
+        </div>
+        <div class="card" data-page-node-id="CqCard5">
+          <div class="card-t"><h3>匹配结果</h3><span class="hint" id="cqResHint" data-page-node-id="CqResHint"></span></div>
+          <div id="cqResult" data-page-node-id="CqResult"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 音阶查询（在指板上点音，反推音阶） ========== -->
+  <section class="page" id="page-scale" data-page-node-id="PageScaleQuery">
+    <div class="layout" data-page-node-id="SqLayout">
+      <div data-page-node-id="SqLeft">
+        <div class="card" data-page-node-id="SqCard1">
+          <div class="card-t"><h3>匹配方式</h3><span class="hint">最少 5 个音</span></div>
+          <div class="field">
+            <label>模式</label>
+            <div class="seg mini" id="sqModeSeg" data-page-node-id="SqModeSeg">
+              <button data-v="coarse" class="on" data-page-node-id="SqModeCoarse">粗匹配</button>
+              <button data-v="fine" data-page-node-id="SqModeFine">细匹配</button>
+            </div>
+          </div>
+          <div class="tip" id="sqModeTip" data-page-node-id="SqModeTip"></div>
+        </div>
+
+        <div class="card" id="sqTonCard" style="display:none" data-page-node-id="SqTonCard">
+          <div class="card-t"><h3>所处调</h3><span class="hint">指定主音后收敛到具体音阶</span></div>
+          <div class="field">
+            <label>主音</label>
+            <select class="inp" id="sqTonic" data-page-node-id="SqTonic"></select>
+          </div>
+          <div class="tip" id="sqTonInfo" data-page-node-id="SqTonInfo"></div>
+        </div>
+
+        <div class="card" data-page-node-id="SqCard2">
+          <div class="card-t"><h3>指板</h3></div>
+          <div class="field">
+            <label>显示范围</label>
+            <select class="inp" id="sqRange" data-page-node-id="SqRange"></select>
+          </div>
+          <div class="field">
+            <label>弦组</label>
+            <select class="inp" id="sqStrings" data-page-node-id="SqStrings"></select>
+          </div>
+          <label class="chk" data-page-node-id="SqAccChk"><input type="checkbox" id="sqAcc" class="hidden" data-page-node-id="SqAcc"><span class="sw"></span>使用降号记谱</label>
+        </div>
+
+        <div class="card" data-page-node-id="SqCard3">
+          <div class="card-t"><h3>已选音</h3><span class="hint" id="sqSelCnt" data-page-node-id="SqSelCnt"></span></div>
+          <div id="sqSelList" data-page-node-id="SqSelList"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="sqUndo" data-page-node-id="SqUndo">撤销一个</button>
+            <button class="btn sm" id="sqClear" data-page-node-id="SqClear">全部清空</button>
+          </div>
+        </div>
+      </div>
+
+      <div data-page-node-id="SqRight">
+        <div class="fb-tools" data-page-node-id="SqTools">
+          <button class="btn primary" id="sqPlay" data-page-node-id="SqPlay">▶ 试听已选音</button>
+          <span class="tip">在指板上点音 —— 再点一次取消</span>
+          <div class="spacer"></div>
+          <span class="tip" id="sqTip" data-page-node-id="SqTip"></span>
+        </div>
+        <div class="card" style="padding:12px" data-page-node-id="SqCard4">
+          <div class="fb-stage" id="fbPickScale" data-page-node-id="FbPickScale"></div>
+        </div>
+        <div class="card" data-page-node-id="SqCard5">
+          <div class="card-t"><h3>匹配结果</h3><span class="hint" id="sqResHint" data-page-node-id="SqResHint"></span></div>
+          <div id="sqResult" data-page-node-id="SqResult"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="metro" data-page-node-id="FqNF90t3jCNVITDNAknFSu">
@@ -1547,6 +1763,9 @@ const SCALE_COLOR = {
     ref:[['某硬摇滚名曲','硬摇滚','G 小调五声的主 riff'],
          ['某布鲁斯摇滚名曲','布鲁斯摇滚','小调五声的摇滚用法']],
     src:'一本五声专书 · 两套五声乐句集' },
+  pent_dom: { cmp:'mixolydian', kw:['属七','印度五声','升三度','东方'],
+    tone:'小调五声把 b3 升成 3，也就是混合利底亚去掉 2 和 6。属七的四个和弦音一个不落、只多一颗 4 —— 所以它既能贴着属和弦走，又保住了五声「怎么弹都不会错」的省力感；从熟的小调五声换过来只需挪一颗音。文献里它也叫印度（印度教）五声音阶。',
+    src:'一本五声／摇滚音阶教材 · 一本异域音阶教材' },
   blues: { kw:['蓝调音 b5','布鲁斯','脏','经过'],
     tone:'小调五声加一颗 b5 —— 这颗音不属于任何和弦，却正是布鲁斯「脏」的来源。必须快速掠过、不能停留，这是它唯一的用法。',
     ref:[['某布鲁斯名曲','布鲁斯','b5 蓝调音的处理示范'],
@@ -1613,8 +1832,8 @@ const SCALE_COLOR = {
   bebop_dom: { kw:['Bebop','经过音','八分音符落点','属七'],
     tone:'混合利底亚补一颗还原 7 当经过音。目的很具体：让八分音符的每一个重音都落在和弦音上。这不是色彩需要，是节拍需要。',
     src:'两本 Bebop／摇滚音阶教材' },
-  bebop_major: { kw:['Bebop','#5 经过音','Maj7'],
-    tone:'大调补一颗 #5 当经过音，保证上行八分音符落在和弦音上 —— 大七和弦上的比博普解法。',
+  bebop_major: { kw:['Bebop','b6 经过音','#5 经过音','Maj7'],
+    tone:'大调补一颗 b6（升高的 5，谱上 #5 与 b6 两种写法都有）当经过音，保证上行八分音符落在和弦音上 —— 大七和弦上的比博普解法。',
     src:'一本 Bebop 教材' },
   bebop_dorian: { kw:['Bebop','还原 3 经过音','m7'],
     tone:'多利亚补一颗还原 3（大三度）当经过音。m7 上要弹出比博普的流动感，就靠这颗音把 2 和 4 连起来。',
@@ -1840,6 +2059,9 @@ const SCALES = [
   { id:'pent_minor', g:'pent', cn:'小调五声音阶', en:'Minor Pentatonic', iv:[0,3,5,7,10],
     d:'吉他手的第一把武器。1-b3-4-5-b7，摇滚布鲁斯即兴的绝对核心。',
     u:'m7 和弦、Blues / Rock 独奏' },
+  { id:'pent_dom', g:'pent', cn:'属五声音阶', en:'Dominant Pentatonic', iv:[0,4,5,7,10],
+    d:'1-3-4-5-b7。小调五声把 b3 升成 3 就是它 —— 属七的四个和弦音一个不落、只多一颗 4，所以从最熟的小调五声乐句切过来只要挪一颗音，整条线立刻从「小调」翻成「属和弦」。也叫印度五声音阶。',
+    u:'7 和弦、属七 Blues、Rock / Fusion 独奏' },
   { id:'blues', g:'pent', cn:'布鲁斯音阶', en:'Blues Scale', iv:[0,3,5,6,7,10],
     d:'小调五声加 b5（蓝调音）。b5 是经过音，要快速掠过，不要停留。',
     u:'Blues、Rock 独奏' },
@@ -1892,13 +2114,22 @@ const SCALES = [
   { id:'enigmatic', g:'exotic', cn:'神秘音阶', en:'Enigmatic', iv:[0,1,4,6,8,10,11],
     d:'人为设计的音阶，含增二度与大七度，非常不安定。',
     u:'实验作品、影视' },
+  /* ---- Bebop 三兄弟（第 43 轮）----
+     三条都是「母音阶 + 一个经过音」，音级数 8 ≠ 一般七声音阶的 7。
+     指型**不能**按这 8 个音独立重排（那样会丢掉母音阶的 7 个把位、指型也认不出来），
+     而要**以母音阶的指型为基础，再在本把位内把经过音点缀进去** —— 见 buildBlocks 的
+     bebopAt / addOrnament。`bp` = 指型所依据的母音阶（**与 SCALE_EXTRA 的 p 是两回事**：
+     p 决定音阶库的分组与听辨体系，这三条本来就不属于任何调式体系，所以 p 仍为 null）。 */
   { id:'bebop_dom', g:'exotic', cn:'属比博普音阶', en:'Bebop Dominant', iv:[0,2,4,5,7,9,10,11],
+    bp:'mixolydian',
     d:'混合利底亚加还原七度。多出的 7 是经过音，用来保证八分音符落在和弦音上。',
     u:'Bebop 即兴、V7 和弦' },
   { id:'bebop_major', g:'exotic', cn:'大比博普音阶', en:'Bebop Major', iv:[0,2,4,5,7,8,9,11],
-    d:'大调加 #5 经过音，用于大七和弦上的比博普线条。',
+    bp:'ionian',
+    d:'大调加 b6 经过音，用于大七和弦上的比博普线条。',
     u:'Maj7 即兴' },
   { id:'bebop_dorian', g:'exotic', cn:'多利亚比博普音阶', en:'Bebop Dorian', iv:[0,2,3,4,5,7,9,10],
+    bp:'dorian',
     d:'多利亚加还原三度经过音，用于小七和弦的比博普乐句。',
     u:'m7 即兴' },
 
@@ -1970,6 +2201,7 @@ const SCALE_EXTRA = {
   pent_mode3:   {p:'pent_major', dg:3, ch:'m7', cv:[0,3,7,10], u:['m7','m6']},
   pent_mode4:   {p:'pent_major', dg:4, ch:'7sus4', cv:[0,5,7,10], u:['7sus4','7(no 3rd)']},
   pent_minor:   {p:'pent_major', dg:5, ch:'m7', cv:[0,3,7,10], u:['m7','m6','Blues / Rock 独奏']},
+  pent_dom:     {p:null, dg:0, ch:'7', cv:[0,4,7,10], u:['7','Blues','Rock','Fusion']},
   blues:        {p:null, dg:0, ch:'m7', cv:[0,3,7,10], u:['7(b5)','Blues','Rock']},
   major_blues:  {p:null, dg:0, ch:'6/9', cv:[0,4,7,9], u:['大调布鲁斯','Country','Rock']},
   minor_6th:    {p:null, dg:0, ch:'m7', cv:[0,3,7,10], u:['m7','m9','Fusion']},
@@ -3513,7 +3745,7 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   if (!SCALES.some(s => s.id === S.scale)) S.scale = SCALES[0].id;
   if (!TUNINGS.some(t => t.id === S.tuning)) S.tuning = TUNINGS[0].id;
   if (!['off','3nps','4nps','pentwide','313','212','2nps','caged','box'].includes(S.pattern)) S.pattern = 'off';
-  /* 宽五声只存在于大小调五声（这两条音阶的 4NPS 铺不出来，见 PATTERNS）：两个档位互相顶替 */
+  /* 宽指型只存在于整个「五声 / 布鲁斯」族（它们的 4NPS 一块都铺不出来，见 PATTERNS）：两个档位互相顶替 */
   if (pentWideScale(S.scale) && S.pattern === '4nps')      S.pattern = 'pentwide';
   if (!pentWideScale(S.scale) && S.pattern === 'pentwide') S.pattern = '4nps';
   S.arpRange = num(S.arpRange, 20, 5, 24);
@@ -3761,16 +3993,26 @@ const PATTERNS = [
   /* 4NPS 是 7 品窗的两条豁免之一（第 37 轮）：每根弦都要跑 4 个连续音阶音，最坏跨
      6 品，7 品窗根本装不下 → winFree 让它按自然宽度铺开。 */
   { id:'4nps',  cn:'一弦四音 4NPS', seq:[4,4,4,4,4,4], winFree:true, spanAll:true },
-  /* 宽五声（第 41 轮，用户点名）：大小调五声的 4NPS 在数学上就铺不出来 ——
-     5 音音阶、每弦 4 音 × 6 弦 = 24 音 ≈ 4.8 个八度，24 品琴颈装不下
-     （实测：大调五声全零，小调五声在 17 条定弦 × 全部音阶 × 全部指型里也只剩 2 块）。
-     于是那一档换成「合并相邻把位」的宽五声：五声把位是「每弦 2 音」，
-     相邻两个把位在每根弦上恰好共享一个边界音（本把位每弦的高音 = 右邻把位同弦的低音），
-     并起来正好每弦 3 音 —— 就是指型教程里的 3-notes-per-string 五声：
-     食指起、小指落，随音程关系取 1-3-4 / 1-2-4 / 1-2-3 三种指序。
-     骨架写「每弦 2 音」只为借 spanAll 把起始弦收成一个（见 buildBlocks 的 seq 那段）；
-     真正的铺法是「铺两个把位再取并集」，在 buildBlocks 的 wideAt 里。 */
-  { id:'pentwide', cn:'宽五声（一弦三音 · 本把位 + 右邻把位）', seq:[2,2,2,2,2,2], spanAll:true },
+  /* 宽指型（第 41 轮立 · 第 44 轮扩到全部 5 音五声 · 第 45 轮扩到 6 音布鲁斯族 ·
+     第 46 轮改成「本把位 7 品窗内全取」）：
+     **整个「五声 / 布鲁斯」族（`g === 'pent'`）** 的 4NPS 都铺不出来，只是缺得程度不同 ——
+     5 音音阶是每弦 4 音 × 6 弦 = 24 音 ≈ 4.8 个八度，远远超；6 音的布鲁斯族正好 24 音 = 4 个八度，
+     **恰好等于整把琴的音域**，于是「每根弦都得贡献恰好 8 个半音」变成一个苛刻的丢番图条件 ——
+     实测在整条定弦表上**一块都画不出来（空白图）**。于是那一档换成宽指型。
+     —— 一块指型 = **一个 7 品把位窗里、每根弦上的全部音阶音**（见 buildBlocks 的 wideAt）：
+        5 音音阶每弦正好 3 个音，就是 3-notes-per-string 五声（食指起、小指落，
+        随音程关系取 1-3-4 / 1-2-4 / 1-2-3 三种指序）；
+        6 音布鲁斯族一弦 3–4 个音 —— 窗里本来就有的第 4 个音必须留着。
+     ⚠️ 第 41–45 轮那版是「两个相邻把位（各每弦 2 音）取并集，要求每弦恰 3 音」。
+        它在规整定弦 + 5 音音阶上恰好等于上面的结果，但在 6 音音阶上**从不成立**：
+        并集形态是 2-2 / 2-2-2-3 / 3-3-4-4-4 这类杂形，于是每一块都落「每弦取 3 个连续音阶音」
+        的兜底 —— 那个兜底既**丢掉窗内第 4 个音**（F 布鲁斯第 6 弦的 Bb@6、第 4 弦的 G@5），
+        又**把音铺到窗外**（第 3 弦的 Eb@8、第 2 弦的 Gb@7 都在把位窗之外）。
+        用户第 46 轮用两张指板图（窗 0–6 / 窗 3–9）指出来的就是这条，已按「窗内全取」改正，
+        并集写法整条删掉（连同 SQ2 / lay2）。
+     骨架写「每弦 2 音」只为借 spanAll 把起始弦收成一个（见 buildBlocks 的 seq 那段），
+     真正取音的是 wideAt，已经不走骨架。 */
+  { id:'pentwide', cn:'宽指型（本把位 7 品窗全取 · 一弦 3–4 音）', seq:[2,2,2,2,2,2], spanAll:true },
   /* arp     = 取音方式：true 按「三度叠置 + 八度重复」取（琶音），省略 = 连续音阶音；
      minStr  = 这条指型允许「至少占几根弦」，决定起始弦能滑到哪（省略 = seq.length）；
      topAdd  = 最高弦在 seq 之上再多取几个音（省略 = 0）；
@@ -3803,11 +4045,54 @@ const PATTERNS = [
 function patternById(id){ return PATTERNS.find(p => p.id === id) || PATTERNS[0]; }
 const BLOCK_COLORS = ['#e5484d','#2563eb','#059669','#d97706','#8b5cf6','#0891b2','#db2777','#65a30d'];
 
+/* ============================================================
+   Bebop 音阶的指型：照母音阶铺 + 把位内点缀经过音
+   （第 43 轮，用户点名）
+   ------------------------------------------------------------
+   三条 bebop 音阶都是「母音阶 + 一颗经过音」，音级数 8。
+   如果照 8 个音独立重排指型，会出两个问题：
+     ① 把位数从母音阶的 7 个变成 8 个 —— 位置编号与把位指型教材对不上；
+     ② 骨架 seq 是按「每弦取 n 个音」铺的，多出来的那颗音会把整条跑句错位，
+        指型变得认不出来。
+   所以指型**以母音阶为基础**，再在本把位内把经过音点缀进去：
+     骨架子 / 锚点 / 品窗 / 「1 音弦」全部按母音阶现算（buildBlocks 里用母音阶音级集合），
+     最后 addOrnament 在本把位内找到经过音的**下方邻音**，把经过音紧接其后插进同一根弦。
+   于是：bebop 音阶的 7 个把位与母音阶逐块对应，每块只多出 0–3 颗经过音。
+   —— 「下方邻音」在三条音阶上都是和弦音：属比博普是 b7、大比博普是 5、
+      多利亚比博普是 b3，所以 2-1-2 那种三度叠置的琶音指型也接得上。
+   ⚠️ bp 与 SCALE_EXTRA 的 p 是两码事：p 决定音阶库分组与听辨体系，
+      这三条本来就不属于任何调式体系（p 仍为 null）；bp 只说「指型照谁铺」。
+   ============================================================ */
+function bebopOrn(sc){
+  if (!sc.bp) return null;
+  const par = scaleById(sc.bp);
+  if (!par || par.id === sc.id) return null;
+  const extra = sc.iv.filter(x => par.iv.indexOf(x) < 0);   /* 本音阶有、母音阶没有的那颗 */
+  const gone  = par.iv.filter(x => sc.iv.indexOf(x) < 0);   /* 只在母音阶里的（应为空） */
+  if (extra.length !== 1 || gone.length !== 0) return null;  /* 不是「+1 颗经过音」就不特殊处理 */
+  const iv = sc.iv.slice().sort((a, b) => a - b);
+  let lower = iv[iv.length - 1] - 12;                        /* 环比一圈，绕过 0 度 */
+  iv.forEach(x => { if (x < extra[0]) lower = x; });         /* 紧挨在它下面的那颗音阶音 */
+  return { par: par, ex: extra[0], lower: lower };
+}
+
 /* ctx = { mid, N, fStart, fEnd, set, group } */
 function buildBlocks(sc, ctx){
   const P = patternById(S.pattern);
   if (P.id === 'off') return null;
   const mid = ctx.mid, N = ctx.N, set = ctx.set;
+  /* bebop 音阶（第 43 轮）：音级数 8 = 母音阶 7 + 1 颗经过音。
+     跨弦指型的**骨架 / 锚点 / 品窗 / 「1 音弦」全部按母音阶现算**（setLay / nAnch），
+     铺完之后再把经过音点缀进去（addOrnament）—— 详见 bebopOrn 上方那段。
+     box / caged 两条分支不用改：它们直接把「窗里的音阶音」捞出来，经过音自然就在里面。 */
+  const beb = bebopOrn(sc);
+  /* ⚠️ bebopOrn 给的是**相对主音的半音数**，而音位比较用的是**绝对音级** —— 必须在这里
+     加上主音换算一次。不换算的话只在主音 C 上碰巧对，其它 11 个主音会照「相对半音数
+     恰好等于某个绝对音级」去找下邻音，把经过音点到别的音上（第 43 轮实测踩过）。 */
+  const bebEx = beb ? (((S.root + beb.ex)    % 12) + 12) % 12 : -1;
+  const bebLo = beb ? (((S.root + beb.lower) % 12) + 12) % 12 : -1;
+  const setLay = beb ? scaleSet(beb.par.iv, S.root) : set;
+  const nAnch  = beb ? beb.par.iv.length : sc.iv.length;
   const fStart = ctx.fStart, fEnd = ctx.fEnd;
   const g = ctx.group || { lo:1, hi:N };
   const loIdx = N - g.hi, hiIdx = N - g.lo;
@@ -3931,21 +4216,23 @@ function buildBlocks(sc, ctx){
      —— 每个把位自带品窗，因此「显示范围」不再裁剪把位内容（分屏时尤其明显）。 */
   const n = sc.iv.length;
   /* 骨架 seq = 「每根弦放几个音」。**铺满全部弦**的跑句型指型（PATTERNS 的 spanAll：
-     3NPS / 4NPS / 宽五声）在七弦定弦下要按 N 补长 —— 骨架只写 6 项，照原样落位会平移出两组
+     3NPS / 4NPS / 宽指型）在七弦定弦下要按 N 补长 —— 骨架只写 6 项，照原样落位会平移出两组
      把位（第 7 弦起 = 2–7 弦组 / 第 6 弦起 = 1–6 弦组），而这几条指型本来就该铺满
      全部弦、只占一档，多出来的那组各少一根弦、等于把同一张图重复印两遍。
      补法 = 重复骨架最后一项（这几条骨架本来就是同一个数重复，所以等价于
      「每弦 2 / 3 / 4 音 × N 弦」）→ minStr 跟着变成 N、起始弦只剩一个 → 只出一组。
-     第 40 轮（用户点名）；宽五声是第 41 轮沿用同一条路 —— 它的骨架只用来枚举锚点，
-     真正铺法在下面的 wideAt。弦数比骨架**短**时（4 / 5 弦贝斯）不走这条路，仍是自然截断。 */
+     第 40 轮（用户点名）；宽指型（第 41 轮）沿用同一条路 —— 它的骨架只用来把起始弦收成一个，
+     真正取音在下面的 wideAt（按把位窗全取，与骨架无关）。弦数比骨架**短**时（4 / 5 弦贝斯）
+     不走这条路，仍是自然截断。 */
   const seq = P.seq ? ((P.spanAll && P.seq.length < N)
       ? P.seq.concat(new Array(N - P.seq.length).fill(P.seq[P.seq.length - 1]))
       : P.seq) : null;
   /* arp 每「一组」几个音：七声 4（1-3-5-7）、五声 3（1-3-5）、其余取 ceil(n/2)。
      绕满一组就回到根音、整组升一个八度。 */
-  const arpM = P.arp ? Math.ceil(n / 2) : 0;
-  /* 从 m 起推进 k 个音阶音：k=1 取下一个，k=2 隔一个取 */
-  const adv = (m, k) => { for (let i = 0; i < k; i++) m = nextScaleMidi(m + 1, set); return m; };
+  const arpM = P.arp ? Math.ceil(nAnch / 2) : 0;
+  /* 从 m 起推进 k 个音阶音：k=1 取下一个，k=2 隔一个取。
+     ST = 走哪一套音级集合（bebop 音阶的骨架按母音阶铺，见上面 setLay）。 */
+  const adv = (m, k, ST) => { const SS = ST || set; for (let i = 0; i < k; i++) m = nextScaleMidi(m + 1, SS); return m; };
 
   /* 在起始弦 s0 的 f0 品处试铺一个把位 —— 锚点 = f0，窗底由 lay 现定（见下）。
      · 只铺 seq.length 根弦 —— 3-1-3 是 5 弦 12 音、2-1-2 是 6 弦 9 音、3NPS 才铺满六弦；
@@ -3968,7 +4255,7 @@ function buildBlocks(sc, ctx){
      · 起始弦可在弦组内滑动：seq 只占 5 根弦的 3-1-3，窗口能摆在「第 6–2 弦」或「第 5–1 弦」。
        原书两种起点都印过 —— 一本 2-1-2 琶音专书说起点可取第 6 / 5 / 4 / 3 弦；
        一本跨弦指型专书里起第 5 弦与起第 6 弦两种都出现过。
-       铺满全部弦的模式（spanAll 的 3NPS / 4NPS / 宽五声，七弦上按 7 项骨架铺）起始弦只有一个，
+       铺满全部弦的模式（spanAll 的 3NPS / 4NPS / 宽指型，七弦上按 7 项骨架铺）起始弦只有一个，
        不受影响；2NPS 与 2-1-2 在七弦上仍会滑出两组（前者骨架 6 项、后者 minStr:3）。 */
   /* minStr = 这条指型允许「至少占几根弦」，默认与 seq.length 相同（必须整条铺满，
      于是 3NPS / 4NPS / 2NPS 只有一档、3-1-3 两档，都与原书印法一致）。
@@ -4014,11 +4301,12 @@ function buildBlocks(sc, ctx){
         4 个连续音阶音自身就要跨 7–8 品，7 品窗在数学上装不下（详见 docs/数据与算法.md）。 */
   const WIN = 7, WIN_MAX = 11, DMAX = 4;
   /* 豁免 7 品窗的两类（用户第 37 轮点名）：4NPS（每弦 4 音）、五声族音阶。
-     五声族由音阶自己带标记 —— sc.g === 'pent' 覆盖大小调五声与布鲁斯族
-     （它们每步 2–3 半音，一条 3 音跑句就要 4–6 品，7 品窗天然容不下）。 */
+     五声族由音阶自己带标记 —— sc.g === 'pent' 覆盖整个「五声 / 布鲁斯」组
+     （自然五声、属五声、三个日本五声、埃及音阶、五声调式 3/4 型，以及 6 音的布鲁斯族；
+     它们每步 2–3 半音，一条 3 音跑句就要 4–6 品，7 品窗天然容不下）。 */
   const winFree = !!P.winFree || sc.g === 'pent';
-  /* 宽五声（第 41 轮）：这一档不是「一条骨架铺满 N 根弦」，而是「两个相邻把位取并集」——
-     走下面同一套锚点枚举，但每个锚点要铺两次（本把位 + 右邻把位）再合并。 */
+  /* 宽指型（第 41 轮立 · 第 46 轮改成「本把位 7 品窗内全取」）：这一档**不走骨架** ——
+     每个锚点只算一个 7 品窗，把窗内该弦上的全部音阶音取出来（见下面的 wideAt）。 */
   const isPentWide = (P.id === 'pentwide');
 
   /* 在窗 [f0−d, f0−d+W−1]（winFree 时右端不封顶）里试铺一条指型。
@@ -4030,8 +4318,9 @@ function buildBlocks(sc, ctx){
         mode = 0（接得上）：链上期待的音落不回本弦窗内 → 整组作废，让窗再挪 / 放宽；
         mode = 1（跳进）：起音从 `max(窗底, m − mid[s])` 起扫 —— 只允许**跳进**，不许下行；
         mode = 2（兜底）：起音从窗底起扫 —— 允许下行（会出现重复音），只为把窗压到达标。 */
-  function layIn(s0, f0, W, d, mode, SQ){
-    const Q = SQ || seq;                     /* 骨架可换：宽五声要拿「每弦 2 音」单独铺一次 */
+  function layIn(s0, f0, W, d, mode, SQ, ST){
+    const Q = SQ || seq;                     /* 骨架可换：lay 与 pickW 的调用方都可以传（宽指型已不走这里） */
+    const SS = ST || set;                    /* 音级集合可换：bebop 音阶按**母音阶**铺骨架 */
     const lo = f0 - d, hi = winFree ? 24 : lo + W - 1;
     if (lo < 0 || (!winFree && hi > 24)) return null;
     const top = Math.min(hiIdx, s0 + Q.length - 1);
@@ -4048,7 +4337,7 @@ function buildBlocks(sc, ctx){
       if (cnt <= 1) return true;
       let x = mid[s] + f;
       for (let i = 0; i < cnt - 1; i++){
-        x = adv(x, stepAt(k + i));
+        x = adv(x, stepAt(k + i), SS);
         if (x - mid[s] > hi) return false;
       }
       return true;
@@ -4075,7 +4364,7 @@ function buildBlocks(sc, ctx){
            mode 2 才是真正的兜底：允许下行，只为把整条压进目标窗（7 品）。 */
         const fLow = (mode === 1 && m >= 0) ? Math.max(lo, m - mid[s]) : lo;
         for (let f = fLow; f <= hi; f++){
-          if (!set.has(pcOf(mid[s] + f))) continue;
+          if (!SS.has(pcOf(mid[s] + f))) continue;
           const r = f - lo;
           /* 先看这个起音能不能让**本弦整条跑句**落回窗内：落不进就得整条锚点作废，
              所以宁可把起音往右挪一品，也别白丢一个锚点。 */
@@ -4100,13 +4389,13 @@ function buildBlocks(sc, ctx){
         const f = x - mid[s];
         if (f < lo || f > hi) return null;     /* 越出窗 → 这组 (窗宽, 让位) 作废 */
         frets.push(f);
-        x = adv(x, stepAt(k));
+        x = adv(x, stepAt(k), SS);
         k++;
       }
       cells.push({ s:s, frets:frets });
       m = x;                                   /* ← 下一弦从这里接 */
     }
-    return { cells:cells, ones:ones };
+    return { cells:cells, ones:ones, lo:lo, hi:hi };
   }
 
   /* 选窗 —— **窗宽是第一目标**（用户原话：「一个指型左右最好控制在 7 品范围内」；第 39 轮由 6 品放宽），
@@ -4132,9 +4421,9 @@ function buildBlocks(sc, ctx){
         试过「一律踩死锚点」与「候选列表 + 去重回退」两种改法，**两种都更差**：
         前者把 3-1-3 的落位从 97.7% 拉到 95.2%（连标准定弦都出现 r=0），
         后者多出 26 处把位顺序倒挂 + 落位掉到 95.5% —— 所以保留本写法。
-     —— 选窗这段抽成 pickW（骨架与「是否豁免」都当参数传）是第 41 轮为「宽五声」做的：
-        它要拿「每弦 2 音」的骨架把两个相邻把位各铺一次再取并集。lay 只是骨架默认那版。 */
-  function pickW(s0, f0, SQ, free){
+     —— 选窗这段抽成 pickW（骨架与「是否豁免」都当参数传）：lay 只是「照 PATTERNS 的骨架取音」
+        的那一版。宽指型第 46 轮起不再走这里 —— 它按「本把位 7 品窗全取」算，见 wideAt。 */
+  function pickW(s0, f0, SQ, free, ST){
     const wmax = free ? WIN : WIN_MAX;
     for (let W = WIN; W <= wmax; W++){
       if (W > 24) break;
@@ -4145,65 +4434,85 @@ function buildBlocks(sc, ctx){
       let pick = null;
       for (let mi = 0; mi < modes.length && !pick; mi++){
         for (let d = 0; d <= DMAX; d++){
-          const r = layIn(s0, f0, W, d, modes[mi], SQ);
+          const r = layIn(s0, f0, W, d, modes[mi], SQ, ST);
           if (r && (!pick || r.ones > pick.ones)) pick = r;
         }
       }
-      if (pick) return pick.cells;
+      /* 连窗带一起交出去（lo / hi）—— bebop 音阶点缀经过音时要拿它判「越不越出本把位」 */
+      if (pick) return pick;
       if (free) break;
     }
     return null;
   }
-  const lay = (s0, f0) => pickW(s0, f0, seq, winFree);
-  /* 宽五声（第 41 轮）：五声把位 = 「每弦 2 音」，与 2NPS 同形，只是骨架按弦数走。
-     合并相邻把位要单独铺两次，所以绕开 lay 把骨架直接传进 pickW。 */
-  const SQ2 = new Array(N).fill(2);
-  const lay2 = (s0, f0) => pickW(s0, f0, SQ2, winFree);
-  /* 宽五声的单块 = 本把位（锚点 f0）∪ 右邻把位（起始弦上再往右一个音阶音 f1）。
-     两个相邻五声把位在每根弦上恰好共享一个边界音 —— 「本把位每弦的高音 = 右邻把位同弦的低音」
-     是指型教程讲五声衔接时明写的一条，所以并起来正好每弦 3 音，即 3-notes-per-string 五声。
-     并完若有哪根弦不是 3 音，说明这条定弦的弦间音程不规则（实测 DADGAD / Open G / 七弦 Drop A
-     上，相邻两个把位在部分弦上会共享 2 个音（并集只剩 2 音）或 0 个（并集 4 音））——
-     这时退回下面那条兜底，而不是把这个把位整块丢掉（否则那些定弦上会缺好几个把位，
-     七弦 Drop A 的小调五声甚至一块都铺不出来）。 */
+  /* lay  = 通用那条：骨架照 PATTERNS，音级集合照母音阶（bebop 音阶）或本音阶本身。 */
+  const lay  = (s0, f0) => pickW(s0, f0, seq, winFree, setLay);
+  /* ⚠️ 第 41–45 轮这里还有一套 SQ2 / lay2：「每弦 2 音」的骨架把相邻两个把位各铺一次再取并集。
+     它在 6 音音阶上从不成立（并集形态 2-2 / 2-2-2-3 / 3-3-4-4-4），每次都要落兜底，
+     而那条兜底会把音砍掉、还会铺到窗外 —— 用户第 46 轮用两张指板图指出后整条删掉。
+     现在宽指型只走下面的 wideAt：「本把位 7 品窗内、每根弦上的全部音阶音」。 */
+  /* 宽指型的一块 = 一个 7 品把位窗里、每根弦上的**全部音阶音**（第 46 轮改正）。
+     窗 = [f0 − d, f0 − d + WIN − 1]，d 取**最小的、让「每根弦都至少 3 个音阶音」的值**
+     —— 窗口尽量靠右，只有不够密时才逐品左移（d ≤ DMAX = 4）。
+     实测（C 布鲁斯 / 标准定弦 / 起始弦 = 第 6 弦）：
+       锚点 1（F@1）→ 窗 [0,6]（d = 1：窗 [1,7] 时第 3 弦只剩 Bb@3 / C@5 两个音）；
+       锚点 3（G@3）→ 窗 [3,9]（d = 0：六根弦都已经 ≥ 3 音，不必左移）。
+     这两块就是用户第 46 轮那两张指板图，逐弦逐品一致。
+     · 5 音音阶在 7 品窗里每弦正好 3 个音 —— 与第 41–45 轮那版并集在规整定弦上逐音相同，
+       所以五声族里规整的那几条（大小调 / 属五声、埃及、五声调式 3·4 型）输出不变；
+     · 6 音布鲁斯族一弦 3–4 个音：窗里本来就有的第 4 个音必须留着，不能按「每弦恰 3 音」砍。
+     窗若在 d ≤ DMAX 内都做不到「每弦 ≥ 3 音」（弦间音程不规则的定弦、或含 3 半音大跳的音阶），
+     退而取「完整弦数最多、其次音数最多」的那个窗；连「每根弦都有音」都做不到就作废这一块
+     —— 低把位不画半条指型。 */
   function wideAt(s0, f0){
-    const a = lay2(s0, f0);
-    if (!a) return null;
-    let f1 = -1;
-    for (let f = f0 + 1; f <= 24; f++){ if (set.has(pcOf(mid[s0] + f))){ f1 = f; break; } }
-    const b = (f1 > 0) ? lay2(s0, f1) : null;
-    if (b){
-      const acc = new Map();
-      a.forEach(c => acc.set(c.s, c.frets.slice()));
-      b.forEach(c => {
-        const cur = acc.get(c.s);
-        if (!cur) return;
-        c.frets.forEach(f => { if (cur.indexOf(f) < 0) cur.push(f); });
-      });
-      let ok = true;
-      acc.forEach(frets => { if (frets.length !== 3) ok = false; });
-      if (ok){
-        const out = [];
-        acc.forEach((frets, s) => out.push({ s:s, frets:frets.slice().sort((x, y) => x - y) }));
-        return out;
+    const nStr = hiIdx - s0 + 1;
+    let best = null;
+    for (let d = 0; d <= DMAX; d++){
+      const lo = f0 - d;
+      if (lo < 0) break;                        /* 再往左就出琴枕了 */
+      const hi = lo + WIN - 1;
+      if (hi > 24) continue;                    /* 高把位：窗右端不能越出指板 */
+      const cells = [];
+      let full = 0, total = 0, holes = 0;
+      for (let s = s0; s <= hiIdx; s++){
+        const fr = [];
+        for (let f = lo; f <= hi; f++) if (set.has(pcOf(mid[s] + f))) fr.push(f);
+        if (!fr.length) holes++;
+        if (fr.length >= 3) full++;
+        total += fr.length;
+        if (fr.length) cells.push({ s:s, frets:fr });
       }
+      if (holes) continue;                      /* 整根弦空着的窗不能当把位 */
+      if (full === nStr) return { cells:cells, lo:lo, hi:hi };   /* 一弦至少三音，达成 */
+      if (!best || full > best.full || (full === best.full && total > best.total))
+        best = { cells:cells, lo:lo, hi:hi, full:full, total:total };
     }
-    /* 兜底：从**本把位每根弦的最低音**起取 3 个连续音阶音。
-       在弦间音程规则的定弦上，这与并集**逐音相同**（并集恰好就是「本把位的两个音 +
-       右邻把位多出来的那一个」）；只有不规则定弦才会走出不同的音 —— 代价是不再叫
-       「两个把位的并集」，好处是每个把位都还在、宽度也仍然是一弦三音。 */
-    const out = [];
-    for (let i = 0; i < a.length; i++){
-      const c = a[i], fr = [];
-      let x = mid[c.s] + c.frets[0];
-      for (let k = 0; k < 3; k++){
-        const f = x - mid[c.s];
-        if (f < 0 || f > 24) return null;
-        fr.push(f);
-        x = nextScaleMidi(x + 1, set);
+    if (!best) return null;
+    return { cells:best.cells, lo:best.lo, hi:best.hi };
+  }
+
+  /* ---- 把经过音点缀进这一块（第 43 轮）----
+     规则一句话：**经过音紧接在「它下方邻音」的后面弹**。
+     下方邻音是母音阶里的音（属比博普是 b7、大比博普是 5、多利亚比博普是 b3 ——
+     三条音阶上恰好都是和弦音，所以 2-1-2 那种三度叠置的琶音指型也接得上）。
+     一块里有几个下邻音就点缀几次：3NPS / 4NPS 跨两三个八度，通常点 2–3 次，
+     正好对应「每个八度一颗经过音」；只占 5 弦 12 音的 3-1-3 一般点 1–2 次。
+     越出本把位品窗的不点 —— 7 品窗是硬指标；下邻音根本不在本块里的也不点，
+     那说明这颗经过音落在别的把位。返回新的 cells（不动原数组）。 */
+  function addOrnament(cells, win){
+    if (!beb) return cells;
+    const gap = ((beb.ex - beb.lower) % 12 + 12) % 12;     /* 经过音比下邻音高几个半音 */
+    const out = cells.map(c => ({ s:c.s, frets:c.frets.slice() }));
+    out.forEach(c => {
+      const add = [];
+      for (let i = 0; i < c.frets.length; i++){
+        const f = c.frets[i];
+        if (pcOf(mid[c.s] + f) !== bebLo) continue;         /* 只在下邻音后面点 */
+        const fEx = f + gap;
+        if (fEx > win.hi || fEx > 24) continue;             /* 越出本把位 → 这颗音归别的把位 */
+        add.push(fEx);
       }
-      out.push({ s:c.s, frets:fr });
-    }
+      if (add.length) c.frets = c.frets.concat(add).sort((a, b) => a - b);
+    });
     return out;
   }
 
@@ -4211,10 +4520,12 @@ function buildBlocks(sc, ctx){
   const seen = new Set();
   starts.forEach(s0 => {
     let cnt = 0;
-    for (let f = 1; f <= 24 && cnt < n; f++){
-      if (!set.has(pcOf(mid[s0] + f))) continue;
-      const cells = isPentWide ? wideAt(s0, f) : lay(s0, f);
-      if (!cells) continue;
+    /* 锚点数量按**母音阶**算（bebop 音阶是 8 个音，但把位仍是母音阶的 7 个） */
+    for (let f = 1; f <= 24 && cnt < nAnch; f++){
+      if (!setLay.has(pcOf(mid[s0] + f))) continue;
+      const r = isPentWide ? wideAt(s0, f) : lay(s0, f);
+      if (!r) continue;
+      const cells = addOrnament(r.cells, r);
       const sig = cells.map(c => c.s + ':' + c.frets.join('.')).join('|');
       if (seen.has(sig)) continue;
       seen.add(sig);
@@ -4842,7 +5153,7 @@ function initControls(){
       + '</optgroup>';
   }).join('');
   $('scaleGroup').innerHTML = GROUPS.map(g => '<option value="' + g.id + '">' + g.cn + '</option>').join('');
-  /* 指型下拉要等音阶定下来再填：档位随音阶换（宽五声 ⇄ 4NPS），见 fillPatternSel */
+  /* 指型下拉要等音阶定下来再填：档位随音阶换（宽指型 ⇄ 4NPS），见 fillPatternSel */
   $('patternSel').innerHTML = '';
   fillStringSel();
   fillArpControls();
@@ -4897,10 +5208,11 @@ function fillStringSel(){
   if (!gs.some(g => g.id === S.strings)) S.strings = 'all';
   $('stringSel').value = S.strings;
 }
-/* 指型下拉带一档「随音阶换」的档位（第 41 轮）：大小调五声下 4NPS 铺不出来
-   （每弦 4 音 × 6 弦 = 24 音 ≈ 4.8 个八度，24 品装不下），那一档换成「宽五声」；
-   反过来，其余音阶不提供宽五声。换音阶时两个档位互相顶替，
-   而不是把用户原来选的档位悄悄丢掉（退回「不分区」）。 */
+/* 指型下拉带一档「随音阶换」的档位（第 41 轮立，第 44 轮扩到全部 5 音五声，
+   第 45 轮扩到 6 音布鲁斯族）：**整个「五声 / 布鲁斯」族**的 4NPS 一块都画不出来
+   （5 音是 24 音 ≈ 4.8 个八度；6 音的布鲁斯族正好 4 个八度 = 整把琴的音域，同样无解）
+   → 那一档换成「宽指型」；反过来其余音阶不提供宽指型。
+   换音阶时两个档位互相顶替，而不是把用户原来选的档位悄悄丢掉（退回「不分区」）。 */
 function patternList(){
   const wide = pentWideScale(S.scale);
   return PATTERNS.filter(p => wide ? p.id !== '4nps' : p.id !== 'pentwide');
@@ -4919,20 +5231,64 @@ function fillPatternSel(){
 /* 提示文案里那句「7 品窗」：五声族音阶是豁免档（见 buildBlocks 的 winFree），
    得换个说法，否则页面上写的和实际画的对不上。 */
 function winFreeNow(){ return scaleById(S.scale).g === 'pent'; }
-/* 带「宽五声」这一档的音阶（第 41 轮）：只有大调 / 小调五声 ——
-   它们每弦 4 音的 4NPS 在 24 品内铺不出来（5 音音阶 × 每弦 4 音 = 24 音 ≈ 4.8 个八度），
-   那一档由宽五声顶替。布鲁斯族虽然同属五声族、4NPS 同样铺不出来，但音数不是 5，
-   「两个相邻把位在每根弦上共享一个边界音」不成立，所以不给它们开这一档。 */
-function pentWideScale(id){ return id === 'pent_major' || id === 'pent_minor'; }
+/* 带「宽指型」这一档的音阶（第 41 轮立，第 44 轮扩到全部 5 音五声，第 45 轮扩到 6 音布鲁斯族）：
+   **整个「五声 / 布鲁斯」族都归这一档** —— 它们的每弦 4 音（4NPS）在 24 品内都铺不出来：
+   5 音音阶是 24 音 ≈ 4.8 个八度（远远超）；6 音的布鲁斯族正好 24 音 = 4 个八度，
+   **恰好等于整把琴的音域**，「每根弦都恰好贡献 8 个半音」这个条件实测无解。
+   所以那一档整个由「宽指型」顶替。现在涵盖 12 条：大调 / 小调 / 属五声、埃及音阶、
+   平调子 / 阴旋法 / 云井调、五声调式 3 型 / 4 型，以及布鲁斯 / 大调布鲁斯 / 小调六声。
+   ⚠️ 判据是**音阶属于哪个族**（`g === 'pent'`）—— 不是音数、也不是「哪几条 id」：
+   以后往这个族里再加音阶（不管几个音）会自动带上这一档。 */
+function pentWideScale(id){
+  const sc = scaleById(id);
+  return !!sc && sc.g === 'pent';
+}
 function winPhrase(){ return winFreeNow()
   ? '五声族音阶不受 7 品窗约束（一条弦就跑半个把位）'
   : '整条把位落在 7 品窗内'; }
+/* ---- Bebop 三兄弟的指型说明（第 43 轮）----
+   大比博普 / 多利亚比博普 / 属比博普都比各自的母音阶多一颗经过音，共 8 音。
+   它们的指型**不是**按这 8 个音重新排的 —— 那样会把母音阶的 7 个把位、7 个手型一起丢掉；
+   而是**以母音阶的对应指型为骨架，再把落在本把位内的经过音点缀进去**（见 buildBlocks 的
+   bebopOrn / setLay / addOrnament）。经过音只在本把位品窗内点，越窗的不点。
+   所以它们的指型会突破一般七声音阶的编排逻辑，页面上单独出一段说明。 */
+function bebopHint(){
+  const orn = bebopOrn(scaleById(S.scale));
+  if (!orn) return '';
+  return '　·　Bebop 特殊编排：以母音阶「' + orn.par.cn + '」的指型为骨架，'
+    + '本把位内点缀 ' + DEG[orn.ex] + ' 经过音（紧接在 ' + DEG[orn.lower] + ' 之后；'
+    + '骨架里没有 ' + DEG[orn.lower] + ' 的块不点缀）';
+}
+function bebopNote(sc){
+  const orn = bebopOrn(sc);
+  if (!orn) return '';
+  return '<div class="bnote"><b>指型按母音阶编排</b>　本条音阶 = 母音阶「' + orn.par.cn
+    + '」+ 一颗 <b>' + DEG[orn.ex] + '</b> 经过音，共 ' + sc.iv.length
+    + ' 音。为保住母音阶的 7 个把位与手型，各指型（3-1-3 / 2-1-2 / 3NPS / 4NPS …）都<b>以「'
+    + orn.par.cn + '」的对应指型为骨架</b>，再把落在本把位品窗内的 ' + DEG[orn.ex]
+    + ' 点缀进去 —— 它紧跟在下方邻音 <b>' + DEG[orn.lower] + '</b> 之后弹（三条音阶上这个下邻音'
+    + '恰好都是和弦音，所以三度叠置的琶音指型也接得住）。这点与其它七声音阶的编排逻辑不同。<br>'
+    + '所以本音阶的<b>把位数量与母音阶完全一致</b>（不会多出一个）；若某个把位的骨架里'
+    + '根本没有那颗下邻音（跨弦的 2-1-2 型音数少，常常如此），这一块就<b>不点缀</b> —— '
+    + '经过音不会脱离它的下邻音单独出现，也不会为了塞它而把品窗撑破。</div>';
+}
+/* 宽指型的说明行（第 46 轮）：一句话就是「本把位 7 品窗内全取」——
+   差别只在音数：5 音音阶每弦正好 3 个，6 音布鲁斯族一弦 3–4 个。
+   文案里把音数说清，免得用户拿 5 音的经验去套 6 音、以为多出来的那个音是算错了。 */
+function pentWidePhrase(){
+  return '本把位 7 品窗内的全部音阶音（'
+    + (pentNoteIs5() ? '5 音音阶每弦 3 个' : '6 音布鲁斯族一弦 3–4 个') + '）';
+}
+function pentNoteIs5(){ return scaleById(S.scale).iv.length === 5; }
 const PATTERN_HINT = {
   off:   '整块显示，不切分把位',
   '3nps': () => '每弦 3 音 · ' + winPhrase() + ' —— 对应把位指型教材的 Position 1–7',
   '4nps':'每弦 4 音 · 一条弦就跑满半个把位，不受 7 品窗约束 —— 把位指型教材第三卷的写法',
-  'pentwide': () => '宽五声 · 每弦 3 音（食指起、小指落）= 本把位 + 右邻把位合并：'
-    + '两个相邻的五声把位在每根弦上共享一个边界音，并起来正好每弦 3 音 · ' + winPhrase(),
+  /* ⚠️ 这一档**不能**再拼 winPhrase()：五声族在 winPhrase 里走的是「不受 7 品窗约束」
+     那一支（那是给 2NPS / 3NPS 这类真正越窗的指型用的），拼在「本把位 7 品窗内全取」
+     后面会自相矛盾 —— 宽指型本身就是靠这个 7 品窗定义的。 */
+  'pentwide': () => '宽指型 · ' + pentWidePhrase()
+    + ' · 窗 = 从锚点品往低音方向最多让 4 品、宽 7 品，让到每根弦都够 3 个音为止',
   '313': '跨弦 3-1-3 · 5 弦 12 音 · 最高弦 4 音 · 两个「1 音弦」落在中指 / 无名指上',
   '212': '跨弦 2-1-2 琶音 · 最多 6 弦 9 音 · 「1 音弦」落在中指 / 无名指上',
   '212b':'跨弦 2-1-2 基本型 · 3 弦 5 音',
@@ -4943,7 +5299,9 @@ const PATTERN_HINT = {
 function fillPatternPos(){
   const P = patternById(S.pattern);
   const hint = PATTERN_HINT[P.id];
-  $('patternHint').textContent = (typeof hint === 'function') ? hint() : (hint || '');
+  /* Bebop 音阶（第 43 轮）追加一句指型说明；`caged` 的位置窗只跟主音走、与音阶无关，不加。 */
+  $('patternHint').textContent = ((typeof hint === 'function') ? hint() : (hint || ''))
+    + (P.id === 'caged' ? '' : bebopHint());
   const bl = currentBlocks();
   const cnt = bl ? bl.list.length : 0;
   const split = (S.fbSplit && P.id !== 'off' && cnt > 1);
@@ -5078,7 +5436,7 @@ function updateScaleInfo(){
   $('scaleUses').innerHTML = (sc.uses && sc.uses.length)
     ? sc.uses.map(u => '<span class="chip">' + u + '</span>').join('') : '<span class="tip">—</span>';
   $('scaleUse').textContent = sc.u || '';
-  $('scaleDesc').innerHTML = '<b>' + sc.cn + '</b>　' + sc.d;
+  $('scaleDesc').innerHTML = '<b>' + sc.cn + '</b>　' + sc.d + bebopNote(sc);
   $('fbTip').textContent = noteName(S.root) + ' ' + sc.cn + ' · 点击任意品格试听';
   paintChordBtn(sc);
   renderBlockLegend(sc);
@@ -5965,7 +6323,7 @@ const QUERY_FAM = {
       ['lydian',      '#4 避开 4 度压住 3 度的半音冲突，比伊奥尼亚更通透'],
       ['pent_major',  '省略 4 与 7，最保险的通用选择，怎么弹都不会错'],
       ['major_blues', '加 b3 经过音，带一点 Blues 味道'],
-      ['bebop_major', '大调音阶加 #5 经过音，八分音符跑动更顺']
+      ['bebop_major', '大调音阶加 b6 经过音，八分音符跑动更顺']
     ],
     arps: [
       [4,  'arp_min7',  'Em7 = 3-5-7-9，最省力的替代，直接叠在 Maj7 上'],
@@ -5993,14 +6351,15 @@ const QUERY_FAM = {
   },
   dom: {
     fam: '属七 / 变化属类',
-    scales: ['mixolydian','lydian_dom','altered','phryg_dom','whole_tone','dim_hw','bebop_dom','blues'],
+    scales: ['mixolydian','lydian_dom','altered','phryg_dom','whole_tone','dim_hw','bebop_dom','pent_dom','blues'],
     subs: [
       ['mixolydian', '最基础的属七选择，3 与 b7 是骨架'],
       ['lydian_dom', '#11 不必解决，现代融合与爵士的通用音响'],
       ['altered',    '全部变化音（b9 #9 b5 #5），张力最大，解决感最强'],
       ['phryg_dom',  'b9 b13，小调 V 级与西班牙／弗拉门戈的首选'],
       ['whole_tone', '#5 与 b5，全音对称，属七的「悬空」色彩'],
-      ['dim_hw',     'b9 #9 #11 13 全给，对称结构好记好模进']
+      ['dim_hw',     'b9 #9 #11 13 全给，对称结构好记好模进'],
+      ['pent_dom',   '只取属七和弦音 + 一颗 4，五声的省力解法，也最「印度」']
     ],
     arps: [
       [4,  'arp_dim7', 'Edim7 = 3-5-b7-b9，只用一个减七琶音就够跑'],
@@ -9241,6 +9600,8 @@ function switchPage(p){
   if (p === 'query')   renderQuery();
   if (p === 'voicing') vcRender();
   if (p === 'tm212')   renderTM212();
+  if (p === 'chord')   cqRender();
+  if (p === 'scale')   sqRender();
 }
 
 function startGame(){
@@ -9723,12 +10084,1288 @@ function initDove(){
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(); });
 }
 
+/* ============================================================
+   和弦查询 / 音阶查询 —— 在指板上点音，反查和弦与音阶（第 47 轮）
+   ------------------------------------------------------------
+   两页共用一块「点音指板」：点一下选中、再点一下取消。
+   · 匹配只看**音高类** —— 同一个音在高音弦 / 低音弦各点一次，
+     只当一个音算（重复不计数）。
+   · 但位置本身留着用：已选音里 **midi 最低**的那个当 bass
+     （斜线和弦 X/Y 的 Y 就是它；图上用红色实心圆标出来）。
+   · 指板几何不复用探索页的 neckSVG —— 那个函数整条挂在全局音阶 /
+     根音 / 指型上，点音反查用不到那些，硬接进去反而更容易坏。
+   ============================================================ */
+const QF = { sel: [] };                 /* 已选位置，按加点顺序排列 */
+const CQ = {
+  mode: 'coarse',                       /* coarse 粗匹配 / degree 音级匹配 / diatonic 调内和弦 */
+  /* ⚠ 调内和弦有**两个**状态，别混：pgrp 是体系（组 id，如 'major'），psc 是母音阶
+     （音阶 id，如 'ionian'）。第 49 轮之前只有一个 psc，却被当成组 id 去查 scalesOf()，
+     于是除「自然大调体系」外一个体系都选不上（见 fillCqScaleSel 的注释）。 */
+  pgrp: 'major',                        /* 调内和弦：体系（组 id） */
+  psc: 'ionian',                        /* 调内和弦：母音阶 id */
+  proot: 0,                             /* 调内和弦：主音 pc */
+  dgr: {},                              /* 音级匹配：pc → 相对和弦根音的半音数（-1 = 不知道） */
+  dia: {}                               /* 调内和弦：pc → 该和弦内的位置 0..4（0 = 根音；-1 = 不知道 / -2 = 调外音） */
+};
+const SQK = {
+  mode: 'coarse',                       /* coarse 粗匹配 / fine 细匹配 */
+  ton: -1                               /* 细匹配：主音 pc（-1 = 未指定） */
+};
+/* 最近一次和弦匹配的命中条数 —— 给「匹配结果」标题右侧的计数用（第 48 轮加，
+   原先 cqResHint 只在「音不够」时被写成空串，正常出结果时它一直是空的）。 */
+let CQ_LAST = null;
+
+/* ---------- 选音集合的基本操作 ---------- */
+function pickPcs(){
+  const mid = tuning().mid, out = [];
+  QF.sel.forEach(x => {
+    const pc = ((mid[x.s] + x.f) % 12 + 12) % 12;
+    if (out.indexOf(pc) < 0) out.push(pc);
+  });
+  return out;
+}
+function pickLow(){
+  const mid = tuning().mid;
+  let best = null;
+  QF.sel.forEach(x => {
+    const m = mid[x.s] + x.f;
+    if (!best || m < best.m) best = { m:m, s:x.s, f:x.f, pc:((m % 12) + 12) % 12 };
+  });
+  return best;
+}
+function pickVis(x){
+  /* 该位置在当前「显示范围 + 弦组」下看不看得见。
+     ⚠ 看不见**不影响匹配**（匹配只看音高类），但要在已选列表里标出来 ——
+       否则用户会看到「指板上只有 4 个点、结果却按 5 个音算」（第 48 轮）。 */
+  const N = tuning().mid.length, sg = stringGroup();
+  if (!inStringGroup(x.s, N, sg)) return false;
+  if (x.f === 0) return S.rangeStart === 0;
+  return x.f >= S.rangeStart && x.f <= S.rangeStart + S.rangeCount - 1;
+}
+function pickHidden(){ let n = 0; QF.sel.forEach(x => { if (!pickVis(x)) n++; }); return n; }
+/* 一个音高类在指板上点到的**全部位置**，按音高从低到高排 */
+function pickFrets(pc){
+  const mid = tuning().mid, out = [];
+  QF.sel.forEach(x => {
+    if ((((mid[x.s] + x.f) % 12) + 12) % 12 !== pc) return;
+    out.push({ s:x.s, f:x.f, m:mid[x.s] + x.f, vis:pickVis(x) });
+  });
+  return out.sort((a,b) => a.m - b.m);
+}
+function pickCntText(){
+  const hid = pickHidden();
+  return QF.sel.length + ' 个位置' + (hid ? '（其中 ' + hid + ' 处不在显示范围内）' : '')
+       + ' · ' + pickPcs().length + ' 个音';
+}
+/* 指板工具条上那行提示（两页共用，同时写） */
+function pickTip(msg){
+  ['cqTip','sqTip'].forEach(id => { const el = $(id); if (el) el.textContent = msg || ''; });
+}
+function pickErase(pc){
+  const mid = tuning().mid;
+  for (let i = QF.sel.length - 1; i >= 0; i--)
+    if ((((mid[QF.sel[i].s] + QF.sel[i].f) % 12) + 12) % 12 === pc) QF.sel.splice(i, 1);
+}
+function pickHas(s, f){ return QF.sel.some(x => x.s === s && x.f === f); }
+const PICK_MAX_POS = 24;     /* 位置数软上限：音高类本来就只有 12 个，位置再多也只是重复 */
+function pickToggle(s, f){
+  const mid = tuning().mid;
+  const i = QF.sel.findIndex(x => x.s === s && x.f === f);
+  if (i >= 0){
+    QF.sel.splice(i, 1);
+    pickTip('');
+    pickRepaint();
+    return;
+  }
+  const pc = (((mid[s] + f) % 12) + 12) % 12;
+  const pcs = pickPcs();
+  /* ⚠ 第 48 轮改：原来的写法是「位置数 ≥ 12 → shift() 掉最早点的那个音」 ——
+     按**位置数**卡 12 个，而且超了就静默丢掉最早点的那个音。位置数根本不该卡
+     （同一个音在 4 根弦上要点 4 次，这时才 6 个音高类就被卡住了）；
+     该卡的是**音高类**（上限就是 12，本身就是上限），超了要明说而不是偷偷丢东西。 */
+  if (pcs.indexOf(pc) < 0 && pcs.length >= 12){
+    pickTip('12 个音高类已经点满了 —— 再点只会是重复音，匹配结果不会变。');
+    return;
+  }
+  if (QF.sel.length >= PICK_MAX_POS){
+    pickTip('同时最多点 ' + PICK_MAX_POS + ' 个位置 —— 先撤掉几个再点。');
+    return;
+  }
+  QF.sel.push({ s:s, f:f });
+  /* 匹配只看音高类：同一个音换个位置点，信息量并不增加，这里明说一句，
+     省得用户以为是工具漏掉了那个位置。 */
+  pickTip(pcs.indexOf(pc) >= 0
+    ? (nameOf(pc, S.flats) + ' 已经在已选里 —— 匹配只看音高类，换把位点同一个音不会多出信息（位置仍会记下来）。')
+    : '');
+  if (S.sound) playMidi(mid[s] + f, 0.9, 0.22);
+  pickRepaint();
+}
+function pickUndo(){ if (QF.sel.length) { QF.sel.pop(); pickTip(''); pickRepaint(); } }
+function pickClear(){ if (QF.sel.length) { QF.sel.length = 0; pickTip(''); pickRepaint(); } }
+
+/* ---------- 点音指板 ---------- */
+function pickSVG(){
+  const mid = tuning().mid, N = mid.length;
+  const sg = stringGroup();
+  const showOpen = S.rangeStart === 0;
+  const fStart = showOpen ? 1 : S.rangeStart;
+  const fEnd   = S.rangeStart + S.rangeCount - 1;
+  const nShown = Math.max(1, fEnd - fStart + 1);
+
+  const fretW  = nShown > 18 ? 38 : nShown > 12 ? 48 : 58;
+  const openW  = 42;
+  const gap    = N > 4 ? 30 : 38;
+  const topPad = 24, botPad = 32;
+  const H      = topPad + (N - 1) * gap + botPad;
+  const x0     = showOpen ? openW : 8;
+  const xEnd   = x0 + nShown * fretW;
+  const W      = xEnd + 30;
+  const r      = 11.2;
+
+  const fretX = f => x0 + (f - fStart + 0.5) * fretW;
+  const lineX = k => x0 + (k - fStart) * fretW;
+  const openX = x0 / 2;
+  const nx    = f => (f === 0 ? openX : fretX(f));
+  const ny    = s => topPad + (N - 1 - s) * gap;
+  const gIdxA = sg ? N - sg.hi : 0;
+  const gIdxB = sg ? N - sg.lo : N - 1;
+  const yTop  = ny(gIdxB) - 13;
+  const yBot  = ny(gIdxA) + 13;
+  const midY  = (yTop + yBot) / 2;
+
+  const p = ['<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H
+    + '" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit">'];
+
+  const bx = showOpen ? openX + r + 2 : x0;
+  p.push('<defs><linearGradient id="png" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" style="stop-color:var(--neck1)"/>'
+    + '<stop offset="1" style="stop-color:var(--neck2)"/></linearGradient></defs>');
+  p.push('<rect x="' + bx + '" y="' + yTop + '" width="' + (xEnd - bx) + '" height="' + (yBot - yTop)
+    + '" rx="5" style="fill:url(#png);stroke:var(--neckEdge)" stroke-width="1"/>');
+
+  for (let k = fStart; k <= fEnd; k++){
+    p.push('<line x1="' + lineX(k) + '" y1="' + yTop + '" x2="' + lineX(k) + '" y2="' + yBot
+      + '" style="stroke:var(--fret)" stroke-width="' + (k <= 3 ? 2.2 : 1.6) + '"/>');
+  }
+  p.push('<line x1="' + xEnd + '" y1="' + yTop + '" x2="' + xEnd + '" y2="' + yBot
+    + '" style="stroke:var(--fret)" stroke-width="1.6"/>');
+
+  if (showOpen){
+    p.push('<rect x="' + (x0 - 4) + '" y="' + yTop + '" width="7" height="' + (yBot - yTop)
+      + '" rx="2" style="fill:var(--nut);stroke:var(--neckEdge)" stroke-width="1"/>');
+  } else {
+    p.push('<text x="' + (x0 + 3) + '" y="' + (topPad - 18) + '" font-size="11" font-weight="700" style="fill:var(--muted)">'
+      + fStart + ' 品</text>');
+  }
+
+  const gN = gIdxB - gIdxA + 1, oddN = (gN % 2) === 1;
+  const inlayY = midY + (oddN ? gap / 2 : 0), inlayD = oddN ? gap / 2 : gap;
+  [3,5,7,9,15,17,19,21].forEach(f => {
+    if (f >= fStart && f <= fEnd) p.push('<circle cx="' + fretX(f) + '" cy="' + inlayY + '" r="3.8" style="fill:var(--dot)"/>');
+  });
+  [12,24].forEach(f => {
+    if (f >= fStart && f <= fEnd){
+      p.push('<circle cx="' + fretX(f) + '" cy="' + (midY - inlayD) + '" r="3.8" style="fill:var(--dot)"/>');
+      p.push('<circle cx="' + fretX(f) + '" cy="' + (midY + inlayD) + '" r="3.8" style="fill:var(--dot)"/>');
+    }
+  });
+
+  for (let f = fStart; f <= fEnd; f++){
+    if (nShown > 16 && f % 2 !== 0) continue;
+    p.push('<text x="' + fretX(f) + '" y="' + (yBot + 11) + '" text-anchor="middle" font-size="10" font-weight="600" style="fill:var(--muted)">' + f + '</text>');
+  }
+  if (showOpen) p.push('<text x="' + openX + '" y="' + (yBot + 11) + '" text-anchor="middle" font-size="10" font-weight="600" style="fill:var(--muted)">0</text>');
+
+  for (let s = 0; s < N; s++){
+    const y = ny(s), on = inStringGroup(s, N, sg);
+    p.push('<line x1="' + bx + '" y1="' + y + '" x2="' + (xEnd + 7) + '" y2="' + y + '" style="stroke:var(--string);opacity:'
+      + (on ? 1 : 0.18) + '" stroke-width="' + (STR_TH[Math.min(s, STR_TH.length - 1)] || 1.4) + '" stroke-linecap="round"/>');
+    p.push('<text x="' + (xEnd + 13) + '" y="' + y + '" dy=".35em" font-size="9.5" font-weight="700" style="fill:var(--muted);opacity:'
+      + (on ? 0.9 : 0.25) + '">' + stringNo(s, N) + '</text>');
+  }
+
+  const lowM = pickLow();
+  const frets = [];
+  if (showOpen) frets.push(0);
+  for (let f = fStart; f <= fEnd; f++) frets.push(f);
+
+  for (let s = 0; s < N; s++){
+    if (!inStringGroup(s, N, sg)) continue;
+    for (let fi = 0; fi < frets.length; fi++){
+      const f    = frets[fi];
+      const midi = mid[s] + f;
+      const pc   = ((midi % 12) + 12) % 12;
+      const on   = pickHas(s, f);
+      const isB  = on && lowM && lowM.s === s && lowM.f === f;
+      const cx = nx(f), cy = ny(s);
+      p.push('<g class="picknote' + (on ? ' on' : '') + (isB ? ' bass' : '') + '" data-s="' + s
+        + '" data-f="' + f + '" data-pc="' + pc + '" data-midi="' + midi + '">');
+      /* 未点的音只留一圈淡淡的描边；点上的音按**音高类**填色（--pk0…--pk11，见 CSS）。
+         ⚠ 第 48 轮改：原来只有「低音 = accent 红 / 其余 = accent2 蓝」两种色，
+           点三四个音就是一片同色，看不出哪几颗是不同的音 —— 用户报的就是这个。 */
+      if (on){
+        p.push('<circle class="pc" cx="' + cx + '" cy="' + cy + '" r="' + r
+          + '" style="fill:var(--pk' + pc + ');stroke:var(--pk' + pc + ')" stroke-width="1.6"/>');
+        /* 低音另外套一圈虚线环 —— 颜色让给音高类，低音改用形状标，两个信息不打架 */
+        if (isB) p.push('<circle class="bring" cx="' + cx + '" cy="' + cy + '" r="' + (r + 4.6)
+          + '" style="fill:none;stroke:var(--text);stroke-width:1.5;stroke-dasharray:3 2.6;opacity:.9"/>');
+        p.push('<text class="pn" x="' + cx + '" cy="' + cy + '" dy=".35em" text-anchor="middle"'
+          + ' style="fill:#fff">' + nameOf(pc, S.flats) + '</text>');
+      } else {
+        p.push('<circle class="pc" cx="' + cx + '" cy="' + cy + '" r="' + r
+          + '" style="fill:transparent;stroke:var(--ring)" stroke-width="1.1"/>');
+        p.push('<text class="pn" x="' + cx + '" cy="' + cy + '" dy=".35em" text-anchor="middle"'
+          + ' style="fill:var(--muted)">' + nameOf(pc, S.flats) + '</text>');
+      }
+      p.push('</g>');
+    }
+  }
+  p.push('</svg>');
+  return p.join('');
+}
+
+/* ---------- 音级下拉 ---------- */
+/* 音级匹配：相对**和弦根音**的十二个位置（没有根音就选「不知道」） */
+const CQ_DEG_OPTS = [
+  { v:-1, t:'不知道' }, { v:0, t:'1 根音' }, { v:1, t:'b2 / b9' }, { v:2, t:'2 / 9' },
+  { v:3, t:'b3 / #9' }, { v:4, t:'3' }, { v:5, t:'4 / 11' }, { v:6, t:'#4 / b5 / #11' },
+  { v:7, t:'5' }, { v:8, t:'b6 / #5 / b13' }, { v:9, t:'6 / 13' }, { v:10, t:'b7' }, { v:11, t:'7' }
+];
+/* 调内和弦的「细匹配」标的是：这颗音是**该和弦的第几个音**（粗匹配不标）。
+   母音阶一旦选定，「哪颗音是音阶的几级」就已经定死了 —— 所以「音阶级数」在这一支里
+   是白说的，真正额外提供的信息只能是「和弦内的位置」。顺序按三度叠置：1 / 3 / 5 / 7 / 9 音。 */
+const CQ_DIA_OPTS = [
+  { v:-1, t:'不知道' }, { v:0, t:'1 音（根音）' }, { v:1, t:'3 音' }, { v:2, t:'5 音' },
+  { v:3, t:'7 音' }, { v:4, t:'9 音' },
+  { v:-2, t:'调外音（不在本级和弦里）' }
+];
+
+/* ---------- 已选音列表 ---------- */
+function selListHTML(mode){
+  const pcs = pickPcs();
+  if (!pcs.length) return '<div class="tip">还没点音 —— 在右边指板上点出你按到的音。</div>';
+  const lowM = pickLow();
+  const map  = (mode === 'diatonic') ? CQ.dia : CQ.dgr;
+  const opts = (mode === 'diatonic') ? CQ_DIA_OPTS : CQ_DEG_OPTS;
+  const showSel = (mode !== 'coarse');
+  const N = tuning().mid.length;
+  const rows = pcs.slice().sort((a,b) => a - b).map(pc => {
+    const isB = lowM && lowM.pc === pc;
+    const v = (map[pc] === undefined) ? -1 : map[pc];
+    let sel = '';
+    if (showSel){
+      sel = '<select data-pc="' + pc + '">'
+        + opts.map(o => '<option value="' + o.v + '"' + (o.v === v ? ' selected' : '') + '>' + o.t + '</option>').join('')
+        + '</select>';
+    }
+    /* 这个音高类在指板上点到的**全部位置**（第 48 轮加）。
+       同音换把位点不增加匹配信息，但看得见才踏实 —— 顺便把「落在当前显示范围外」
+       的那些位置单独角标出来，否则用户会疑惑「指板上只看到 4 个点，怎么算 5 个音」。 */
+    const ps = pickFrets(pc);
+    const outN = ps.filter(x => !x.vis).length;
+    return '<div class="selrow"><i class="pk" style="background:var(--pk' + pc + ')"></i>'
+      + '<span class="nm">' + nameOf(pc, S.flats) + '</span>'
+      + (isB ? '<span class="bas">低音</span>' : '')
+      + '<span class="poss">' + ps.map(x => stringNo(x.s, N) + ' 弦 ' + x.f + ' 品').join(' · ') + '</span>'
+      + (outN ? '<span class="ooo">' + outN + ' 处范围外</span>' : '')
+      + sel
+      + '<button class="x" data-del="' + pc + '" title="删掉这个音（' + nameOf(pc, S.flats) + '）">×</button>'
+      + '</div>';
+  });
+  return '<div class="sellist">' + rows.join('') + '</div>';
+}
+
+/* ---------- 两页的重绘 ---------- */
+/* ⚠ 第 48 轮修：原来只重画指板和已选列表，**不重算结果** ——
+   于是点完音结果区纹丝不动，非得再碰一下模式按钮 / 换个下拉 / 切一次页才出结果。
+   现在结果跟着一起刷；两页各算一遍（12×46 与 984 条读法）都是毫秒级，换来「点了就有」。 */
+function pickRepaint(){ cqPaint(); sqPaint(); cqResults(); sqResults(); }
+function cqPaint(){
+  const host = $('fbPickChord'); if (!host) return;
+  host.innerHTML = pickSVG();
+  $('cqSelCnt').textContent = pickCntText();
+  $('cqSelList').innerHTML = selListHTML(CQ.mode);
+}
+function sqPaint(){
+  const host = $('fbPickScale'); if (!host) return;
+  host.innerHTML = pickSVG();
+  $('sqSelCnt').textContent = pickCntText();
+  $('sqSelList').innerHTML = selListHTML('coarse');
+}
+
+/* ---------- 下拉填充 ---------- */
+const PICK_RANGES = [
+  ['0,6',  '0 – 5 品（开放把位）'], ['0,8',  '0 – 7 品'], ['0,13', '0 – 12 品（推荐）'],
+  ['0,16', '0 – 15 品'], ['0,20', '0 – 19 品'], ['0,25', '0 – 24 品（全指板）'],
+  ['5,8',  '5 – 12 品'], ['7,8',  '7 – 14 品'], ['12,13', '12 – 24 品']
+];
+function fillPickCtrls(){
+  const ropts = PICK_RANGES.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
+  const sopts = allStringGroups().map(g => '<option value="' + g.id + '">' + g.cn + '</option>').join('');
+  ['cqRange','sqRange'].forEach(id => { const el = $(id); if (el) el.innerHTML = ropts; });
+  ['cqStrings','sqStrings'].forEach(id => { const el = $(id); if (el) el.innerHTML = sopts; });
+  const key = S.rangeStart + ',' + S.rangeCount;
+  ['cqRange','sqRange'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.value = key;
+    if (!el.value){ S.rangeStart = 0; S.rangeCount = 13; el.value = '0,13'; }
+  });
+  ['cqStrings','sqStrings'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.value = S.strings;
+    if (!el.value){ S.strings = 'all'; el.value = 'all'; }
+  });
+  const nopt = SHARP.map((n, i) => '<option value="' + i + '">' + n + '</option>').join('');
+  if ($('cqDiaRoot')) $('cqDiaRoot').innerHTML = nopt;
+  if ($('cqDiaGroup')){
+    $('cqDiaGroup').innerHTML = cqGroupOptsHTML();
+    $('cqDiaGroup').value = CQ.pgrp;      /* ⚠ innerHTML 重建会把已选值冲掉，必须回填 */
+  }
+  if ($('sqTonic')){
+    $('sqTonic').innerHTML = '<option value="-1">未指定（粗匹配）</option>' + nopt;
+    $('sqTonic').value = String(SQK.ton);     /* ⚠ innerHTML 重建会把已选值冲掉，必须回填 */
+  }
+  if ($('cqAcc')) $('cqAcc').checked = !!S.flats;
+  if ($('sqAcc')) $('sqAcc').checked = !!S.flats;
+}
+function fillCqScaleSel(){
+  /* ⚠ 第 49 轮修的那条 bug 就长在这里：它把**音阶 id**（psc，如 'ionian'）
+     拿去当**组 id** 查 scalesOf() —— 而 scalesOf 过滤的是 s.g（组 id，如 'major'）。
+     于是这个查询恒为空，每次都回落到 'major'，紧接着把体系下拉的值也改成 'major'，
+     用户刚选的体系当场被冲掉；psc 又不在 major 组里 → 再被打回 'ionian'。
+     净效果：除「自然大调体系」外，任何体系都选不上（表现为「后面几个没法选」）。
+     现在体系单独存 CQ.pgrp，两个下拉各按各的状态重建。 */
+  cqDiaNorm();
+  const gsel = $('cqDiaGroup'), ssel = $('cqDiaScale');
+  if (!gsel || !ssel) return;
+  gsel.innerHTML = cqGroupOptsHTML();
+  gsel.value = CQ.pgrp;
+  /* 母音阶下拉列该体系的全部音阶（母音阶排最前，其余是它的调式）——
+     scalesOf() 已按「父音阶优先」排好。 */
+  const list = scalesOf(CQ.pgrp);
+  ssel.innerHTML = list.map(s => '<option value="' + s.id + '">' + s.cn
+    + '（' + s.iv.length + ' 音）</option>').join('');
+  if (!list.some(s => s.id === CQ.psc)) CQ.psc = list.length ? list[0].id : 'ionian';
+  ssel.value = CQ.psc;
+  $('cqDiaRoot').value = CQ.proot;
+}
+
+/* ---------- 页面总渲染（结果部分在下面的引擎里） ---------- */
+function cqRender(){
+  fillPickCtrls(); fillCqScaleSel();
+  document.querySelectorAll('#cqModeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === CQ.mode));
+  $('cqDiaCard').style.display = (CQ.mode === 'diatonic') ? '' : 'none';
+  paintModeTip('cq', CQ.mode, 'chord');
+  cqPaint();
+  cqResults();
+}
+function sqRender(){
+  fillPickCtrls();
+  /* 刚切到细匹配、还没定主音 —— 先拿低音当默认，省得用户再点一次 */
+  if (SQK.mode === 'fine' && SQK.ton < 0){ const l = pickLow(); SQK.ton = l ? l.pc : 0; }
+  document.querySelectorAll('#sqModeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === SQK.mode));
+  $('sqTonCard').style.display = (SQK.mode === 'fine') ? '' : 'none';
+  if ($('sqTonic')) $('sqTonic').value = String(SQK.ton);
+  paintModeTip('sq', SQK.mode, 'scale');
+  sqPaint();
+  sqResults();
+}
+function paintModeTip(pfx, mode, kind){
+  const el = $(pfx + 'ModeTip'); if (!el) return;
+  let s = '';
+  if (kind === 'chord'){
+    if (mode === 'coarse')   s = '只知道按到了哪些音 —— 不知道哪个是根音。系统反过来枚举 12 个候选根音，给出全部对得上的和弦。';
+    if (mode === 'degree')   s = '给每个音标上它相对和弦根音是**几音**（不知道就选「不知道」）。有几个音级已知就够收敛；根音没指定时结果里会出现<b>斜线和弦</b>。';
+    if (mode === 'diatonic') s = '先说清处在哪个母音阶下 —— 然后只在该音阶的七级和弦里找，并按「常见的可能性」从高到低排。再给某几颗音标上<b>它在这个和弦里是第几个音</b>（1 音 / 3 音 / 5 音 …），粗匹配就进到细匹配。';
+  } else {
+    if (mode === 'coarse')   s = '把点出的音当成某个音阶的一部分，全库 × 12 个主音一起搜；按「多出来的音最少」排。';
+    if (mode === 'fine')     s = '指定主音后收敛（比如确定为 C 开头）。但七声音阶到这里也常常只剩<b>母音阶组</b> —— 同一组音有好几个名字，工具会把它们并排列出来让你按上下文定；对称音阶（全音 / 减 / 增 / 半音）连主音都分不出来，也照样并列。';
+  }
+  el.innerHTML = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+/* ---------- 事件绑定（只在启动时挂一次；容器重绘不丢） ---------- */
+function bindPickPages(){
+  ['fbPickChord','fbPickScale'].forEach(id => {
+    const host = $(id);
+    if (!host) return;
+    host.addEventListener('click', e => {
+      const g = (e.target && e.target.closest) ? e.target.closest('g.picknote') : null;
+      if (!g) return;
+      audio();
+      pickToggle(parseInt(g.dataset.s, 10), parseInt(g.dataset.f, 10));
+    });
+  });
+  document.querySelectorAll('#cqModeSeg button').forEach(b => b.onclick = () => { CQ.mode = b.dataset.v; cqRender(); });
+  document.querySelectorAll('#sqModeSeg button').forEach(b => b.onclick = () => { SQK.mode = b.dataset.v; sqRender(); });
+  ['cqRange','sqRange'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.onchange = () => {
+      const q = el.value.split(',');
+      S.rangeStart = parseInt(q[0], 10) || 0;
+      S.rangeCount = parseInt(q[1], 10) || 13;
+      fillPickCtrls(); save(); cqPaint(); sqPaint();
+      cqResults(); sqResults();
+    };
+  });
+  ['cqStrings','sqStrings'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.onchange = () => { S.strings = el.value; fillPickCtrls(); save(); cqPaint(); sqPaint(); };
+  });
+  ['cqAcc','sqAcc'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.onchange = () => {
+      S.flats = !!el.checked;
+      document.querySelectorAll('#cqAcc,#sqAcc').forEach(x => x.checked = S.flats);
+      $('accChk').checked = S.flats;
+      save(); cqPaint(); sqPaint(); cqResults(); sqResults();
+    };
+  });
+  $('cqDiaGroup').onchange = () => {
+    /* 换体系 → 母音阶跟着换成该体系的母音阶（scalesOf 把父音阶排在最前） */
+    CQ.pgrp = $('cqDiaGroup').value;
+    const l = scalesOf(CQ.pgrp);
+    CQ.psc = l.length ? l[0].id : 'ionian';
+    cqDiaNorm(); fillCqScaleSel(); cqResults();
+  };
+  $('cqDiaScale').onchange = () => {
+    /* 换母音阶 → 体系跟着走，免得两个下拉各说各话 */
+    CQ.psc = $('cqDiaScale').value;
+    cqDiaNorm(); fillCqScaleSel(); cqResults();
+  };
+  $('cqDiaRoot').onchange  = () => { CQ.proot = parseInt($('cqDiaRoot').value, 10) || 0; cqResults(); };
+  $('sqTonic').onchange    = () => { SQK.ton = parseInt($('sqTonic').value, 10); sqResults(); };
+  /* 结果里「同一组音的读法」按钮 —— 委托到容器上，结果重绘也不会丢 */
+  const sqRes = $('sqResult');
+  if (sqRes) sqRes.addEventListener('click', e => {
+    const b = (e.target && e.target.closest) ? e.target.closest('button[data-sqton]') : null;
+    if (!b) return;
+    SQK.ton = parseInt(b.dataset.sqton, 10);
+    SQK.mode = 'fine';
+    sqRender();
+  });
+  $('cqSelList').addEventListener('change', e => {
+    const s = (e.target && e.target.closest) ? e.target.closest('select[data-pc]') : null;
+    if (!s) return;
+    const pcv = parseInt(s.dataset.pc, 10), v = parseInt(s.value, 10);
+    if (CQ.mode === 'diatonic') CQ.dia[pcv] = v; else CQ.dgr[pcv] = v;
+    cqResults();
+  });
+  /* 已选音那一行的 × —— 一次删掉这个**音高类的全部位置**。
+     委托挂在容器上，所以列表重绘也不会丢（第 48 轮加）。 */
+  ['cqSelList','sqSelList'].forEach(id => {
+    const host = $(id); if (!host) return;
+    host.addEventListener('click', e => {
+      const b = (e.target && e.target.closest) ? e.target.closest('button[data-del]') : null;
+      if (!b) return;
+      pickErase(parseInt(b.dataset.del, 10));
+      pickTip('');
+      pickRepaint();
+    });
+  });
+  $('cqUndo').onclick  = pickUndo;
+  $('cqClear').onclick = pickClear;
+  $('sqUndo').onclick  = pickUndo;
+  $('sqClear').onclick = pickClear;
+  $('cqPlay').onclick  = pickPlay;
+  $('sqPlay').onclick  = pickPlay;
+}
+function pickPlay(){
+  const mid = tuning().mid;
+  if (!QF.sel.length) return;
+  audio();
+  const ms = QF.sel.map(x => mid[x.s] + x.f).sort((a,b) => a - b);
+  doPlay(ms, 300, 0.9);
+}
+
+/* ============================================================
+   点音反查用的和弦性质库
+   ------------------------------------------------------------
+   比「即兴查询表」的 CHORD_QUALS 宽一档：补齐了六和弦、九 / 十一 / 十三、
+   变化属，以及**各种缺音形态**（7(no5) / 7(no3) …）。
+   缺音形态不是凑数 —— 「把七声音阶去掉根音、拆成两个三音组」那套体系里，
+   这些三音组正是全部素材，所以点音反查必须认得出它们。
+   iv 一律是「从根音起的半音数」，升序去重、0 必在其中、长度 ≤ 7。
+   w  是常见度先验（越小越常见），**只参与排序**，不参与判定。
+   ============================================================ */
+const QUERY_QUALS = [
+  /* 三和弦 */
+  { id:'maj',      cn:'大三和弦',       sym:'',         iv:[0,4,7],          w:0 },
+  { id:'min',      cn:'小三和弦',       sym:'m',        iv:[0,3,7],          w:0 },
+  { id:'dim',      cn:'减三和弦',       sym:'dim',      iv:[0,3,6],          w:2 },
+  { id:'aug',      cn:'增三和弦',       sym:'aug',      iv:[0,4,8],          w:5 },
+  { id:'sus4',     cn:'挂四和弦',       sym:'sus4',     iv:[0,5,7],          w:2 },
+  { id:'sus2',     cn:'挂二和弦',       sym:'sus2',     iv:[0,2,7],          w:3 },
+  /* 六和弦 */
+  { id:'maj6',     cn:'大六和弦',       sym:'6',        iv:[0,4,7,9],        w:2 },
+  { id:'min6',     cn:'小六和弦',       sym:'m6',       iv:[0,3,7,9],        w:3 },
+  { id:'maj69',    cn:'六九和弦',       sym:'6/9',      iv:[0,2,4,7,9],      w:4 },
+  /* 七和弦 */
+  { id:'maj7',     cn:'大七和弦',       sym:'maj7',     iv:[0,4,7,11],       w:0 },
+  { id:'min7',     cn:'小七和弦',       sym:'m7',       iv:[0,3,7,10],       w:0 },
+  { id:'dom7',     cn:'属七和弦',       sym:'7',        iv:[0,4,7,10],       w:0 },
+  { id:'m7b5',     cn:'半减七和弦',     sym:'m7b5',     iv:[0,3,6,10],       w:2 },
+  { id:'dim7',     cn:'减七和弦',       sym:'dim7',     iv:[0,3,6,9],        w:3 },
+  { id:'minmaj7',  cn:'小大七和弦',     sym:'m(maj7)',  iv:[0,3,7,11],       w:5 },
+  { id:'aug7',     cn:'增七和弦',       sym:'7#5',      iv:[0,4,8,10],       w:5 },
+  { id:'augmaj7',  cn:'增大七和弦',     sym:'maj7#5',   iv:[0,4,8,11],       w:6 },
+  { id:'dom7b5',   cn:'属七降五',       sym:'7b5',      iv:[0,4,6,10],       w:5 },
+  { id:'dom7sus4', cn:'属七挂四',       sym:'7sus4',    iv:[0,5,7,10],       w:3 },
+  /* 九和弦 / 附加音 */
+  { id:'maj9',     cn:'大九和弦',       sym:'maj9',     iv:[0,2,4,7,11],     w:3 },
+  { id:'min9',     cn:'小九和弦',       sym:'m9',       iv:[0,2,3,7,10],     w:3 },
+  { id:'dom9',     cn:'属九和弦',       sym:'9',        iv:[0,2,4,7,10],     w:2 },
+  { id:'dom9sus4', cn:'九挂四和弦',     sym:'9sus4',    iv:[0,2,5,7,10],     w:5 },
+  { id:'m9b5',     cn:'半减九和弦',     sym:'m9b5',     iv:[0,2,3,6,10],     w:6 },
+  { id:'add9',     cn:'加九和弦',       sym:'add9',     iv:[0,2,4,7],        w:4 },
+  { id:'madd9',    cn:'小三加九',       sym:'m(add9)',  iv:[0,2,3,7],        w:5 },
+  { id:'add11',    cn:'加十一和弦',     sym:'add11',    iv:[0,4,5,7],        w:6 },
+  { id:'adds11',   cn:'加升十一',       sym:'add#11',   iv:[0,4,6,7],        w:6 },
+  /* 十一 / 十三 */
+  { id:'maj7s11',  cn:'大七升十一',     sym:'maj7#11',  iv:[0,4,6,7,11],     w:4 },
+  { id:'min11',    cn:'小十一和弦',     sym:'m11',      iv:[0,3,5,7,10],     w:5 },
+  { id:'dom7s11',  cn:'属七升十一',     sym:'7#11',     iv:[0,4,6,7,10],     w:5 },
+  { id:'maj13',    cn:'大十三和弦',     sym:'maj13',    iv:[0,2,4,7,9,11],   w:5 },
+  { id:'min13',    cn:'小十三和弦',     sym:'m13',      iv:[0,2,3,7,9,10],   w:5 },
+  { id:'dom13',    cn:'属十三和弦',     sym:'13',       iv:[0,2,4,7,9,10],   w:4 },
+  /* 变化属 */
+  { id:'dom7b9',   cn:'属七降九',       sym:'7b9',      iv:[0,1,4,7,10],     w:4 },
+  { id:'dom7s9',   cn:'属七升九',       sym:'7#9',      iv:[0,3,4,7,10],     w:5 },
+  { id:'dom7b9b5', cn:'属七降九降五',   sym:'7b9b5',    iv:[0,1,4,6,10],     w:6 },
+  { id:'dom7s9s5', cn:'属七升九升五',   sym:'7#9#5',    iv:[0,3,4,8,10],     w:6 },
+  /* 缺音形态：点三四个音时最常撞上的就是这些 */
+  { id:'dom7n5',   cn:'属七缺五度',     sym:'7(no5)',   iv:[0,4,10],         w:3 },
+  { id:'min7n5',   cn:'小七缺五度',     sym:'m7(no5)',  iv:[0,3,10],         w:3 },
+  { id:'maj7n5',   cn:'大七缺五度',     sym:'maj7(no5)', iv:[0,4,11],        w:4 },
+  { id:'mmaj7n5',  cn:'小大七缺五度',   sym:'m(maj7)(no5)', iv:[0,3,11],     w:6 },
+  { id:'dom7n3',   cn:'属七缺三度',     sym:'7(no3)',   iv:[0,7,10],         w:4 },
+  { id:'maj7n3',   cn:'大七缺三度',     sym:'maj7(no3)', iv:[0,7,11],        w:4 },
+  { id:'m7b5n3',   cn:'半减七缺三度',   sym:'m7b5(no3)', iv:[0,6,10],        w:6 },
+  { id:'maj6n3',   cn:'大六缺三度',     sym:'6(no3)',   iv:[0,7,9],          w:6 }
+];
+
+/* ---------- 调内「可能性」先验：从本机的进行库统计出来 ----------
+   把教材进行集里每一颗和弦的根音按「相对主音的半音数」计数 —— **只数教材进行集**，
+   经典进行集不参与（理由见函数里那段注释）。统计结果与文献里的分布对得上：
+   大调下 I 最多，其次 V、IV，再是 ii、vi，iii 偏少，vii° 最少
+   —— 所以直接拿它当「这一级常不常见」的先验。 */
+let DEG_PRIOR = null;
+function degPrior(){
+  if (DEG_PRIOR) return DEG_PRIOR;
+  const c = new Array(12).fill(0);
+  const BASE = { 1:0, 2:2, 3:4, 4:5, 5:7, 6:9, 7:11 };
+  const ACC  = { '':0, 'b':-1, '#':1, 'bb':-2, '##':2 };
+  const rx = /^([#b]{0,2})([1-7])([A-Za-z0-9\-#+]*)(?:\/([#b]{0,2}[1-7]))?$/;
+  const off = (a, n) => (((BASE[n] + (ACC[a] || 0)) % 12) + 12) % 12;
+  const add = (s, w) => {
+    String(s || '').split('|').forEach(cell => {
+      cell.trim().split(/\s+/).forEach(tk => {
+        const m = rx.exec(tk); if (!m) return;
+        c[off(m[1], +m[2])] += w;
+        if (m[4]){ const b = rx.exec(m[4]); if (b) c[off(b[1], +b[2])] += w * 0.4; }
+      });
+    });
+  };
+  BOOK.forEach(b => { add(b.deg, 1); add(b.alt, 1); });
+  /* ⚠ 这里**故意不数经典进行集**：那批进行几乎全落在大调体系内，
+     偏移 7 出现 8 次、偏移 0 只有 10 次 —— 一旦加权，V 会反压过 I
+     （实测 7:203 > 0:178），「I 最靠前」这条就没了。
+     只用教材进行集这一份语料，实测（偏移:出现次数）
+       7:171  0:138  5:119  9:115  2:89  4:86  11:8
+     归一化之后的大调七级顺序 = V > I > IV > vi > ii > iii > vii°
+     —— 两个主力 V 与 I 咬得很紧，这也是教科书语料与文献都认的结论
+     （古典语料里 I 常略高于 V，流行语料里反过来；本机这份是后者）。 */
+  const mx = Math.max.apply(null, c) || 1;
+  DEG_PRIOR = c.map(x => x / mx);
+  return DEG_PRIOR;
+}
+
+/* ---------- 小工具 ---------- */
+/* 和弦标记：根音名 + 性质符号（+ 可选斜线低音） */
+function chordSym(root, q, bassPc){
+  let s = nameOf(root, S.flats) + q.sym;
+  if (bassPc >= 0 && bassPc !== root) s += '/' + nameOf(bassPc, S.flats);
+  return s;
+}
+/* 按音程集合反查性质表 */
+function qualByIv(ivs){
+  const key = ivs.slice().sort((a,b) => a - b).join(',');
+  return QUERY_QUALS.find(q => q.iv.join(',') === key) || null;
+}
+/* 附加音的音级写法（相对和弦根音的半音数） */
+const ADDLBL = { 1:'b9', 2:'9', 3:'#9', 5:'11', 6:'#11', 8:'b13', 9:'13', 10:'b7' };
+/* 性质表里查不到时兜底命名：
+   先挑一个「能命名的基础和弦」当骨架（四音优先），多出来的音写成附加音。 */
+function genericQual(ivs){
+  const keys = ivs.slice().sort((a,b) => a - b);
+  const pref = [4,3,5,6,2];
+  for (let pi = 0; pi < pref.length; pi++){
+    const sz = pref[pi];
+    const hit = QUERY_QUALS.filter(q => q.iv.length === sz && q.iv.every(x => keys.indexOf(x) >= 0))
+                           .sort((a,b) => a.w - b.w)[0];
+    if (hit){
+      const extra = keys.filter(x => hit.iv.indexOf(x) < 0);
+      if (!extra.length) return hit;
+      return { id:'x_' + hit.id, cn:hit.cn + '加' + extra.map(x => ADDLBL[x] || ('+' + x)).join('/'),
+               sym:hit.sym + extra.map(x => '(' + (ADDLBL[x] || ('+' + x)) + ')').join(''),
+               iv:keys, w:hit.w + 3 };
+    }
+  }
+  return { id:'raw', cn:'未命名的音组', sym:'(' + keys.join('·') + ')', iv:keys, w:9 };
+}
+function qualOf(ivs){ return qualByIv(ivs) || genericQual(ivs); }
+
+/* ---------- 三音组分类（点出的音对不上任何和弦时的兜底口径） ----------
+   这一路来自现代爵士和声里「把七声音阶去掉根音、拆成两个三音组」的体系：
+   每个三音组按它在音阶里的位置归入五族之一 ——
+     三和弦（隔一个音取一个）· 四度叠置（1-4-5）· 音簇（连着三个音级）
+     · 七和弦缺五音 · 七和弦缺三音
+   三音组彼此能不能配（配对表）也跟着那套体系走。 */
+const GMC_FAM = [
+  { id:'triad',   cn:'三和弦',        en:'Triad',       d:'从最低音起每隔一个音级取一个：三度叠置出的三和弦（含减 / 增）。' },
+  { id:'fourth',  cn:'四度叠置',      en:'3-part Fourth', d:'从最低音取「1–4–5」（根音 + 四度 + 五度）。' },
+  { id:'cluster', cn:'音簇',          en:'3-part Cluster', d:'三个**相邻音级**叠在一起（二度叠置）。' },
+  { id:'q7n5',    cn:'七和弦缺五音',  en:'7th no 5',     d:'根音 + 三音 + 七音 —— 四音七和弦里省掉五度。' },
+  { id:'q7n3',    cn:'七和弦缺三音',  en:'7th no 3',     d:'根音 + 五音 + 七音 —— 四音七和弦里省掉三度。' }
+];
+/* 三音组的十种配对（书里给的那套「能配 / 不能配」） */
+const GMC_PAIRS = [
+  ['triad','triad'], ['fourth','fourth'], ['cluster','cluster'],
+  ['triad','q7n5'], ['fourth','q7n5'], ['cluster','q7n5'],
+  ['triad','q7n3'], ['fourth','q7n3'], ['cluster','q7n3'],
+  ['q7n5','q7n3']
+];
+/* 三音组按「转位读数」判族：返回 [{root(相对最低音的转位), iv, fam, why}]，可多条 */
+function trichordReads(pcs){
+  const out = [];
+  const key = ivs => ivs.join(',');
+  const TRIAD = { '0,3,7':'小三和弦', '0,4,7':'大三和弦', '0,3,6':'减三和弦', '0,4,8':'增三和弦' };
+  const FOUR  = { '0,5,7':'根音 + 纯四度 + 纯五度', '0,5,6':'根音 + 纯四度 + 增四度',
+                  '0,6,7':'根音 + 减五度 + 纯五度', '0,2,7':'根音 + 大二度 + 纯五度' };
+  const Q5    = { '0,4,10':'属七缺五度', '0,3,10':'小七缺五度', '0,4,11':'大七缺五度',
+                  '0,3,11':'小大七缺五度', '0,3,9':'减七缺五度', '0,4,9':'大六缺五度',
+                  '0,5,10':'属七挂四缺五度' };
+  const Q3    = { '0,7,10':'属七 / 小七缺三度', '0,7,11':'大七缺三度', '0,6,10':'半减七缺三度',
+                  '0,6,9':'减七缺三度', '0,8,10':'增七缺三度', '0,8,11':'增大七缺三度',
+                  '0,7,9':'大六缺三度' };
+  pcs.forEach(r => {
+    const iv = pcs.map(pc => ((pc - r) % 12 + 12) % 12).sort((a,b) => a - b);
+    const k = key(iv);
+    if (TRIAD[k]) out.push({ root:r, iv:iv, fam:'triad',   why:TRIAD[k] });
+    if (FOUR[k])  out.push({ root:r, iv:iv, fam:'fourth',  why:FOUR[k] });
+    if (Q5[k])    out.push({ root:r, iv:iv, fam:'q7n5',    why:Q5[k] });
+    if (Q3[k])    out.push({ root:r, iv:iv, fam:'q7n3',    why:Q3[k] });
+    /* 音簇：三个音挤在 4 个半音以内 —— 就是「连着三个音级」的二度叠置。
+       ⚠ 这里原来写的是 `iv[2] <= 4 && iv[0] >= 1`，可 iv 是**从最低音算起**排好序的，
+       iv[0] 按构造恒等于 0 → 音簇这一族永远判不出来（第 47 轮踩到，
+       C 伊奥尼亚那 20 颗三音组里 4 颗音簇全被错划进「七和弦缺三音」）。
+       改成「两个相邻音程都 ≥ 1 且严格递增」，等价于「三个互不相同的音、跨度 ≤ 4」。 */
+    if (iv[2] <= 4 && iv[1] >= 1 && iv[2] > iv[1])
+      out.push({ root:r, iv:iv, fam:'cluster', why:'三个相邻音级（跨度 ' + iv[2] + ' 个半音）' });
+  });
+  return out;
+}
+
+/* ---------- 和弦音的音级写法（显示用） ---------- */
+const TONELBL = { 0:'根音', 1:'b9', 2:'9', 3:'b3', 4:'3', 5:'11', 6:'b5', 7:'5', 8:'b13', 9:'6', 10:'b7', 11:'7' };
+const CQ_DIA_GROUPS = ['major', 'harm', 'mel', 'harmaj', 'dblmin'];
+/* 「调内和弦」只在这五个体系里找 —— 它们都是七声音阶体系，每一级都能三度叠置出
+   一个「这个调下的和弦」。其余家族（五声与布鲁斯、对称音阶、异域与 Bebop、琶音）
+   要么音数不是七、要么根本谈不上「调内各级和弦」，一律不进这个下拉（第 49 轮）。
+   ⚠ 说明写在声明**之后**：写在前面的注释会被「顶格代码块」回归脚本算进上一个老块尾部，
+     让本来不该变的块报差异（第 49 轮踩到）。 */
+
+const TRIAD_TYPE = { '0,4,7':'maj', '0,3,7':'min', '0,3,6':'dim', '0,4,8':'aug' };
+function cqDiaNorm(){
+  /* 把调内和弦的「体系 / 母音阶」两个状态归一到允许范围，返回归一后的母音阶对象。
+     ⚠ 两者必须始终自洽：psc 属于 pgrp，且 pgrp 在那五个七声体系里。
+       引擎（cqDiatonic）与下拉（fillCqScaleSel）都从这里过一道，免得两边各说各话。 */
+  let sc = scaleById(CQ.psc);
+  if (CQ_DIA_GROUPS.indexOf(sc.g) < 0) sc = scaleById('ionian');
+  if (CQ_DIA_GROUPS.indexOf(CQ.pgrp) < 0 || CQ.pgrp !== sc.g) CQ.pgrp = sc.g;
+  CQ.psc = sc.id;
+  return sc;
+}
+function cqGroupOptsHTML(){
+  /* 体系下拉的选项。fillPickCtrls 与 fillCqScaleSel 共用这一份 ——
+     ⚠ 原先 fillPickCtrls 里铺的是**全部 9 个组**（含五声与布鲁斯、对称、异域与 Bebop、
+       琶音），只因为 cqRender 紧接着会调 fillCqScaleSel 把它覆盖掉才没露馅；
+       两处口径必须同一份，免得改了一处忘另一处（第 49 轮）。 */
+  return CQ_DIA_GROUPS.map(gid => {
+    const g = GROUPS.find(x => x.id === gid);
+    return '<option value="' + gid + '">' + (g ? g.cn : gid) + '</option>';
+  }).join('');
+}
+const RN7 = ['I','II','III','IV','V','VI','VII'];
+
+/* ============================================================
+   ① 粗匹配：只知道点了哪些音
+   ------------------------------------------------------------
+   枚举 12 个候选根音 × 全性质表，分三种读法：
+     精确 —— 点出的音与该和弦构成音完全一致
+     加音 —— 和弦对得上，另外多按了几颗（延伸音 / 附加音）
+     少音 —— 点出的音都在和弦里，和弦还差几个音没按
+   排序用「多 / 缺音数 + 根音是否被点出 + 低音是不是根音 + 常见度先验」。
+   「少音」的读法只在根音被点出时才认真考虑 —— 否则任何三个音都能被
+   说成某个七和弦的碎片，结果会泛滥得没法看。
+   ============================================================ */
+function cqCoarse(pcs){
+  const setP = new Set(pcs);
+  const bass = pickLow(), bassPc = bass ? bass.pc : -1;
+  const out = [];
+  for (let r = 0; r < 12; r++){
+    const ivs = pcs.map(pc => ((pc - r) % 12 + 12) % 12).sort((a,b) => a - b);
+    QUERY_QUALS.forEach(q => {
+      const miss  = q.iv.filter(x => ivs.indexOf(x) < 0);
+      const extra = ivs.filter(x => q.iv.indexOf(x) < 0);
+      if (miss.length && extra.length) return;
+      if (miss.length > 3 || extra.length > 4) return;
+      const rootIn = setP.has(r);
+      if (miss.length && !rootIn) return;
+      const kind = (!miss.length && !extra.length) ? 'exact' : (extra.length ? 'extra' : 'miss');
+      let pen = extra.length * 2.2 + miss.length * 3.0 + q.w * 0.55;
+      if (!rootIn) pen += 5;
+      if (bassPc >= 0 && bassPc !== r) pen += 1.5;
+      out.push({ root:r, q:q, miss:miss, extra:extra, kind:kind, pen:pen,
+                 rootIn:rootIn, bassPc:bassPc });
+    });
+  }
+  out.sort((a,b) => a.pen - b.pen || a.q.w - b.q.w || a.root - b.root);
+  return out;
+}
+
+/* ============================================================
+   ② 音级匹配：知道部分音是几音（其余选「不知道」）
+   ------------------------------------------------------------
+   已知音级 = 硬约束（相对根音的半音数必须对上）；
+   「不知道」的音必须落在和弦构成音里（允许至多 1 颗附加音）。
+   ⚠ 只要标出一颗音级，根音就被钉死了（每颗已知音级都在反推同一个根音），
+   所以候选根音其实只有一颗。斜线和弦因此出现在**低音不是根音**的时候，
+   写成 X/Y；同时「低音自己当根音」的那套名字要另算一遍才能列出来
+   （放开了音级约束才算得出，见 cqDegreeHTML 里那一段）。
+   ============================================================ */
+function cqDegrees(pcs){
+  const known = [];
+  pcs.forEach(pc => { const v = CQ.dgr[pc]; if (typeof v === 'number' && v >= 0) known.push({ pc:pc, semi:v }); });
+  if (!known.length) return null;
+  const setP = new Set(pcs);
+  const bass = pickLow(), bassPc = bass ? bass.pc : -1;
+  const out = [];
+  for (let r = 0; r < 12; r++){
+    let ok = true;
+    known.forEach(k => { if ((((r + k.semi) % 12) + 12) % 12 !== k.pc) ok = false; });
+    if (!ok) continue;
+    QUERY_QUALS.forEach(q => {
+      const cps = q.iv.map(i => (((r + i) % 12) + 12) % 12);
+      const extra = pcs.filter(x => cps.indexOf(x) < 0);
+      const miss  = cps.filter(x => pcs.indexOf(x) < 0);
+      if (extra.length > 1 || miss.length > 3) return;
+      const rootIn = setP.has(r);
+      let pen = extra.length * 3.4 + miss.length * 1.5 + q.w * 0.5;
+      if (!rootIn) pen += 4;
+      if (bassPc >= 0 && bassPc !== r) pen += 1.2;
+      out.push({ root:r, q:q, extra:extra, miss:miss, bassPc:bassPc, rootIn:rootIn, pen:pen,
+                 kind: extra.length ? 'extra' : (miss.length ? 'miss' : 'exact') });
+    });
+  }
+  out.sort((a,b) => a.pen - b.pen || a.q.w - b.q.w || a.root - b.root);
+  return out;
+}
+
+/* ============================================================
+   ③ 调内和弦：先定母音阶（主音 + 调式），只在这个音阶的各级和弦里找
+   ------------------------------------------------------------
+   三级 3 / 4 / 5 音都枚举（三和弦 / 七和弦 / 九和弦），要求
+   **点出的音全部落在该和弦里**；「可能性」= 多出来的和弦音 + 该级常见度。
+   常见度不是拍脑袋写的：直接数本机进行库里每个和弦根音的半音偏移
+   （见 degPrior），大调下自然算出 V > I > IV > vi > ii > iii > vii°。
+   标了音级（调内和弦的「细匹配」）时，音级必须正好落在该和弦的对应级上。
+   ============================================================ */
+function cqDiatonic(pcs){
+  const sc = cqDiaNorm(), root = CQ.proot, iv = sc.iv, n = iv.length;
+  /* 音阶也已归一 —— 如果 CQ.psc 落在那五个体系之外（旧状态 / 别的入口带进来的），
+     cqDiaNorm() 会把它带回大调，引擎与下拉不会各算一套。 */
+  const setP = new Set(pcs);
+  const bass = pickLow(), bassPc = bass ? bass.pc : -1;
+  const prior = degPrior();
+  const want = [], outside = [];
+  pcs.forEach(pc => {
+    const v = CQ.dia[pc];
+    if (typeof v === 'number' && v >= 0) want.push({ pc:pc, d:v });
+    else if (v === -2) outside.push(pc);
+  });
+  /* 标了「调外音」的音，本级和弦一个都装不下 —— 直接空手而归，页面会说明原因 */
+  if (outside.length) return { rows:[], sc:sc, root:root, n:n, want:want, outside:outside };
+  const rows = [];
+  for (let k = 0; k < n; k++){
+    for (let sz = 3; sz <= 5; sz++){
+      const idx = [];
+      for (let j = 0; j < sz; j++) idx.push((k + 2 * j) % n);
+      const cps = idx.map(j => (((root + iv[j]) % 12) + 12) % 12);
+      if (new Set(cps).size < sz) continue;             /* 对称音阶上音高类会塌，跳过 */
+      if (!pcs.every(x => cps.indexOf(x) >= 0)) continue;   /* 必须包含全部点出的音 */
+      /* 「细匹配」：标了位置的音，必须正好落在该和弦的第那个位置上。
+         ⚠ 判据是「和弦内的位置」，不是「音阶的级数」——
+         用级数当判据等于拿母音阶复述一遍，永远为真，细匹配就退化成粗匹配了（第 47 轮踩到）。 */
+      let okWant = true;
+      want.forEach(w => { if (w.d >= sz || cps[w.d] !== w.pc) okWant = false; });
+      if (!okWant) continue;
+      const extra = cps.filter(x => pcs.indexOf(x) < 0);
+      if (extra.length > 4) continue;
+
+      const cRoot = cps[0];
+      const cIv = cps.map(x => ((x - cRoot) % 12 + 12) % 12).sort((a,b) => a - b);
+      const q = qualOf(cIv);
+      const d0 = iv[idx[0]];
+      const tiv = [0, (((iv[idx[1]] - d0) % 12) + 12) % 12, (((iv[idx[2]] - d0) % 12) + 12) % 12].sort((a,b) => a - b);
+      /* ⚠ 查不到时**不要**默认成 'maj'：双和声小调族里三度叠置会给出 `1 3 b5`（0·4·6）、
+         `1 2 #4`（0·2·6）这种非常规三音组，硬当大三和弦会让罗马数字说谎。
+         认不出来就小写 + 问号，具体的音程写在行内的性质里（第 49 轮）。 */
+      const tq = TRIAD_TYPE[tiv.join(',')] || '';
+      let rn = (n === 7) ? RN7[k] : ('第 ' + (k + 1) + ' 级');
+      if (n === 7){
+        if (tq === 'min') rn = rn.toLowerCase();
+        else if (tq === 'dim') rn = rn.toLowerCase() + '°';
+        else if (tq === 'aug') rn = rn + '+';
+        else if (!tq) rn = rn.toLowerCase() + '?';
+        if (sz === 4) rn += '7';
+        else if (sz === 5) rn += '9';
+      }
+      const prio = 1 - prior[(((iv[k] % 12) + 12) % 12)];
+      let pen = extra.length * 1.9 + prio * 3.2 + (sz - 3) * 0.35;
+      if (want.length) pen += Math.max(0, sz - want.length) * 1.6;
+      if (bassPc >= 0 && bassPc !== cRoot) pen += 1.4;
+      if (!setP.has(cRoot)) pen += 0.8;
+      rows.push({ deg:k, size:sz, cps:cps, cRoot:cRoot, q:q, rn:rn, extra:extra,
+                  pen:pen, prio:prio, want:want.length });
+    }
+  }
+  rows.sort((a,b) => a.pen - b.pen || a.deg - b.deg || a.size - b.size);
+  return { rows:rows, sc:sc, root:root, n:n, want:want, outside:[] };
+}
+
+/* ---------- 行渲染 ---------- */
+function cqRowHTML(c){
+  const q = c.q;
+  const nm = chordSym(c.root, q, c.bassPc);
+  const pct = Math.max(8, Math.min(100, Math.round(104 - c.pen * 6)));
+  const tones = q.iv.map(i => nameOf(((c.root + i) % 12 + 12) % 12, S.flats)).join(' ');
+  const why = [];
+  why.push(c.rootIn ? '根音已点出' : '根音没点出（省略根音的按法）');
+  if (c.bassPc >= 0 && c.bassPc !== c.root) why.push('低音 ' + nameOf(c.bassPc, S.flats) + ' → 写斜线');
+  if (c.extra && c.extra.length) why.push('多出 ' + c.extra.map(x => TONELBL[x]).join('/'));
+  if (c.miss && c.miss.length) why.push('还缺 ' + c.miss.map(x => TONELBL[x]).join('/'));
+  return '<div class="mres">'
+    + '<div class="mh"><span class="nm">' + nm + '</span><span class="dsc">' + q.cn + '</span></div>'
+    + '<div class="why">构成音 ' + tones + ' · ' + why.join(' · ') + '</div>'
+    + '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+}
+function cqSection(tag, note, arr, cap, fn){
+  if (!arr.length) return '';
+  let s = '<div class="mres"><div class="mh"><span class="tag">' + tag + '</span>'
+        + '<span class="dsc">' + note + '</span></div></div><div class="mreslist">';
+  arr.slice(0, cap).forEach(c => { s += fn(c); });
+  if (arr.length > cap) s += '<div class="why">…同类读法另 ' + (arr.length - cap) + ' 条（按可能性排序，已截断）</div>';
+  return s + '</div>';
+}
+
+/* ---------- 粗匹配的结果块 ---------- */
+function cqCoarseHTML(pcs){
+  const list = cqCoarse(pcs);
+  CQ_LAST = { n: list.length };
+  if (!list.length) return '<div class="tip"><b>没有任何和弦性质对得上这几个音</b> —— 请直接看下面的<b>三音组分类</b>。</div>';
+  const g = { exact:[], extra:[], miss:[] };
+  list.forEach(c => g[c.kind].push(c));
+  let h = '';
+  h += cqSection('精确命中', '点出的音与和弦构成音完全一致（' + g.exact.length + ' 条）', g.exact, 14, cqRowHTML);
+  h += cqSection('加音读法', '和弦本身对得上，另外还多按了几颗音 —— 延伸音 / 附加音', g.extra, 10, cqRowHTML);
+  h += cqSection('少音读法', '点出的音都在这个和弦里，和弦还差几个音没按到', g.miss, 10, cqRowHTML);
+  if (!g.exact.length) h = '<div class="tip">没有「完全一致」的和弦 —— 下面都是近似读法，或者看三音组分类。</div>' + h;
+  return h;
+}
+
+/* ---------- 音级匹配的结果块 ---------- */
+function cqDegreeHTML(pcs){
+  const list = cqDegrees(pcs);
+  CQ_LAST = { n: list ? list.length : 0 };
+  if (list === null) return '<div class="tip">还没给任何一颗音标音级 —— 左下角每颗音都可以选「它是几音」，不确定就留「不知道」。</div>';
+  if (!list.length) return '<div class="tip">按标出的音级，找不到任何一个和弦对得上（同一个音级不可能同时落在两颗不同的音上）。</div>';
+  const bass = pickLow(), bassPc = bass ? bass.pc : -1;
+  const g = { exact:[], extra:[], miss:[] };
+  list.forEach(c => g[c.kind].push(c));
+  let h = '<div class="tip" style="margin-bottom:10px">已知音级：'
+    + pcs.filter(pc => typeof CQ.dgr[pc] === 'number' && CQ.dgr[pc] >= 0)
+         .map(pc => '<b>' + nameOf(pc, S.flats) + '</b>='
+              + (TONELBL[CQ.dgr[pc]] || CQ.dgr[pc])).join(' · ')
+    + (bassPc >= 0 ? ' · 低音 <b>' + nameOf(bassPc, S.flats) + '</b>' : '') + '</div>';
+  h += cqSection('完全吻合', '标出的音级与和弦构成音一一对上', g.exact, 12, cqRowHTML);
+  h += cqSection('还多一颗', '标出的音级对得上，另外有一颗音在这个和弦里没有位置（可能是外音或附加音）', g.extra, 8, cqRowHTML);
+  h += cqSection('还缺音', '标出的音级对得上，和弦还有构成音没按到', g.miss, 8, cqRowHTML);
+  /* 低音自己当根音时的另一套名字 —— 斜线和弦的另一面。
+     ⚠ 必须**放开音级约束**另算一遍：标了一颗音级之后根音就被钉死了，
+       在 list 里找 root === bassPc 永远找不到（第 47 轮踩到，
+       原判据写成 `c.root === bassPc && c.root !== c.bassPc`，后半段恒为假，这一段从不显示）。 */
+  if (bassPc >= 0 && bassPc !== list[0].root){
+    const alt = cqCoarse(pcs).filter(c => c.root === bassPc);
+    if (alt.length)
+      h += cqSection('低音当根音', '同一组音换个根音念就是另一个名字（斜线和弦的两面）',
+                     alt, 6, cqRowHTML);
+  }
+  return h;
+}
+
+/* ---------- 调内和弦的结果块 ---------- */
+function cqDiaHTML(pcs){
+  const R = cqDiatonic(pcs);
+  CQ_LAST = { n: R.rows.length };
+  let h = '<div class="tip" style="margin-bottom:10px">母音阶：<b>'
+    + nameOf(R.root, S.flats) + ' ' + R.sc.cn + '</b>（' + R.n + ' 音）'
+    + (R.want.length ? ' · 已标和弦音级 ' + R.want.length + ' 颗' : '') + '</div>';
+  if (R.outside && R.outside.length)
+    return h + '<div class="tip">你把 <b>' + R.outside.map(x => nameOf(x, S.flats)).join(' / ')
+      + '</b> 标成了「调外音」—— 那这个母音阶的各级和弦当然都装不下它。'
+      + '换个母音阶，或者把这几颗音改回「不知道」。</div>';
+  if (!R.rows.length)
+    return h + '<div class="tip">这个音阶的各级和弦里，没有哪个能同时装下你点出的全部音 —— '
+      + '要么点出了调外音，要么换一个母音阶试试。</div>';
+  h += '<div class="mreslist">';
+  R.rows.slice(0, 14).forEach(r => {
+    const nm = nameOf(r.cRoot, S.flats) + r.q.sym;
+    const pct = Math.max(8, Math.min(100, Math.round(100 - r.pen * 5)));
+    const tones = r.cps.map(x => nameOf(x, S.flats)).join(' ');
+    const why = [];
+    why.push(r.q.id === 'raw'
+      ? '这一级三度叠置出来的是 ' + r.q.sym + '，性质表里没有对应名称'
+      : (r.size === 3 ? '三和弦' : r.size === 4 ? '七和弦' : '九和弦'));
+    why.push('该级常见度 ' + Math.round(r.prio * 100) + '%');
+    if (r.extra.length) why.push('多出 ' + r.extra.map(x => nameOf(x, S.flats)).join('/') + '（还没按到）');
+    else why.push('构成音全部按到了');
+    h += '<div class="mres"><div class="mh"><span class="tag">' + r.rn + '</span>'
+      + '<span class="nm">' + nm + '</span><span class="dsc">' + r.q.cn + '</span></div>'
+      + '<div class="why">构成音 ' + tones + ' · ' + why.join(' · ') + '</div>'
+      + '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+  });
+  if (R.rows.length > 14) h += '<div class="why">…另 ' + (R.rows.length - 14) + ' 条（已按可能性截断）</div>';
+  h += '</div>';
+  h += '<div class="tip" style="margin-top:10px">「可能性」= 多出来的和弦音越少越靠前 + 该级在本机进行库里越常见越靠前'
+     + '（本机进行库实测 V &gt; I &gt; IV &gt; vi &gt; ii &gt; iii &gt; vii° —— 两个主力是 V 与 I）。</div>';
+  return h;
+}
+
+/* ---------- 三音组分类（兜底口径） ---------- */
+function kSubsets(arr, k){
+  const out = [];
+  (function rec(i, cur){
+    if (cur.length === k){ out.push(cur.slice()); return; }
+    for (let j = i; j < arr.length; j++){ cur.push(arr[j]); rec(j + 1, cur); cur.pop(); }
+  })(0, []);
+  return out;
+}
+/* ⚠ 同一颗三音组常常有好几种读法（换个最低音念就归到另一个族），这里取「次序在前的那个」。
+   次序 = 三度叠置 → 四度叠置 → 音簇 → 七和弦缺五音 → 七和弦缺三音。
+   这不是随手排的：把 C 伊奥尼亚去掉根音后的 20 颗三音组按这个次序走一遍，
+   得到的划分与那套体系逐条相同（每族恰好 4 颗）——
+   三和弦 D-F-A / E-G-B / G-B-D / B-D-F，四度 D-G-A / E-A-B / A-D-E / B-E-F，
+   音簇 D-E-F / E-F-G / F-G-A / G-A-B，缺五音 D-E-G / E-F-A / F-G-B / D-A-B，
+   缺三音 D-E-B / D-F-G / E-G-A / F-A-B。 */
+function trichordFam1(pcs){
+  const reads = trichordReads(pcs);
+  const order = ['triad','fourth','cluster','q7n5','q7n3'];
+  for (let i = 0; i < order.length; i++) if (reads.some(r => r.fam === order[i])) return order[i];
+  return null;
+}
+function famName(id){ const f = GMC_FAM.find(x => x.id === id); return f ? f.cn : '—'; }
+function gmcPanelHTML(pcs){
+  const P = pcs.slice().sort((a,b) => a - b);
+  let h = '<div class="gmc"><b>三音组分类</b> —— 当这几个音凑不出一个和弦名字时，按'
+        + '「把七声音阶去掉根音、拆成两个三音组」的口径判：每个三音组按它在音阶里的位置'
+        + '归入下面五族之一（三音组不再往下面拆，就没有歧义了）。'
+    + '<div class="fams">' + GMC_FAM.map(f => '<span class="fam">' + f.cn + '</span>').join('') + '</div>';
+
+  if (P.length === 3){
+    const fam = trichordFam1(P);
+    const reads = trichordReads(P);
+    if (!fam){ h += '<div>这颗三音组在五族里都不成形：既不是三度 / 四度叠置，也不是相邻三个音级，也不构成七和弦的缺音形态。</div>'; }
+    else {
+      const f = GMC_FAM.find(x => x.id === fam);
+      h += '<div>本三音组归入 <b>' + f.cn + '</b>。' + f.d + '</div>';
+      h += '<ul class="pr">';
+      reads.forEach(r => {
+        h += '<li>以 <b>' + nameOf(r.root, S.flats) + '</b> 为最低音读作 '
+          + r.iv.join('-') + ' → ' + famName(r.fam) + '（' + r.why + '）</li>';
+      });
+      h += '</ul>';
+      const ok = GMC_PAIRS.filter(pr => pr.indexOf(fam) >= 0).map(pr => pr.map(famName).join(' / '));
+      h += '<div style="margin-top:5px">按这套体系，它可以和 <b>'
+        + [...new Set(ok.map(s => s.split(' / ').filter(x => x !== f.cn)[0] || f.cn))].join(' / ')
+        + '</b> 配成完整的一组。</div>';
+    }
+  } else if (P.length === 6){
+    const all = kSubsets(P, 3);
+    const seen = {};
+    let legal = 0;
+    const lines = [];
+    all.forEach(a => {
+      const b = P.filter(x => a.indexOf(x) < 0);
+      const ka = a.join('_'), kb = b.join('_');
+      const key = (ka < kb) ? (ka + '|' + kb) : (kb + '|' + ka);
+      if (seen[key]) return;
+      seen[key] = 1;
+      const fa = trichordFam1(a), fb = trichordFam1(b);
+      if (!fa || !fb) return;
+      const pr = [fa, fb].sort().join('+');
+      const okPair = GMC_PAIRS.some(x => x.slice().sort().join('+') === pr);
+      if (okPair) legal++;
+      lines.push('<li>' + a.map(x => nameOf(x, S.flats)).join('') + '（' + famName(fa) + '） + '
+        + b.map(x => nameOf(x, S.flats)).join('') + '（' + famName(fb) + '） → '
+        + (okPair ? '<b>可以配</b>' : '不该配在一起') + '</li>');
+    });
+    h += '<div>六个音正好拆成两个三音组 —— 这套体系里能配的只有：三和弦配三和弦 / 三度叠置配七和弦缺五音 / '
+       + '七和弦缺五音配七和弦缺三音 …；三和弦配四度叠置、三和弦配音簇、四度叠置配音簇都不行。</div>';
+    h += '<ul class="pr">' + lines.slice(0, 10).join('') + '</ul>';
+    h += '<div>10 种拆法里 <b>' + legal + '</b> 种是合规配对。</div>';
+  } else {
+    const subs = kSubsets(P, 3);
+    const hits = subs.filter(s => trichordFam1(s));
+    h += '<div>' + P.length + ' 个音可以拆出 ' + subs.length + ' 组三音组，其中 '
+       + hits.length + ' 组能归入五族：</div><ul class="pr">';
+    hits.slice(0, 14).forEach(s => {
+      h += '<li>' + s.map(x => nameOf(x, S.flats)).join('·') + ' → <b>' + famName(trichordFam1(s)) + '</b></li>';
+    });
+    if (hits.length > 14) h += '<li>…另 ' + (hits.length - 14) + ' 组</li>';
+    h += '</ul>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ---------- 和弦查询总入口 ---------- */
+function cqMatchHTML(pcs){
+  const bass = pickLow();
+  let h = '<div class="tip" style="margin-bottom:11px">点出的音：'
+    + pcs.slice().sort((a,b) => a - b).map(pc => '<b>' + nameOf(pc, S.flats) + '</b>').join(' · ')
+    + (bass ? '（低音 <b>' + nameOf(bass.pc, S.flats) + '</b>，第 ' + stringNo(bass.s, tuning().mid.length)
+              + ' 弦 ' + bass.f + ' 品）' : '') + '</div>';
+  if (CQ.mode === 'diatonic')      h += cqDiaHTML(pcs);
+  else if (CQ.mode === 'degree')   h += cqDegreeHTML(pcs);
+  else                             h += cqCoarseHTML(pcs);
+  h += gmcPanelHTML(pcs);
+  return h;
+}
+/* ============================================================
+   音阶查询引擎
+   ------------------------------------------------------------
+   点出 ≥ 5 个音，在「全部音阶 × 12 个主音」里找装得下它们的音阶。
+   判据只有一条：点出的音高类集合 ⊆ 该音阶在那一主音下的音高类集合
+   —— 这等价于「点出音之间的音程关系都能在这个音阶里成立」。
+
+   ⚠ 一条结果 = **一组音高类**，不是一个音阶名。原因是同一组音往往有好几个
+     名字：七声音阶的同一组音有 7 个读法（C 伊奥尼亚 = D 多利亚 = …），
+     五声音阶有 5 个（C 大调五声 = A 小调五声），对称音阶更极端 ——
+     全音阶转 2 / 4 / 6 / 8 / 10 个半音都还是它自己，增音阶转 4 / 8 个半音也是。
+     所以结果里把同一组音的全部读法并列出来、每个都能一键当主音进细匹配；
+     七声音阶「只能给出母音阶组」说的就是这件事，其余同类情形也一并报出来
+     （靠 setSymmetry 自动发现，不用一条条写死）。
+
+   排序：先按「还差几个音」分层（点 5 个音、命中七声音阶 = 你还差 2 个音），
+   同层再按音阶体系的常见度（自然大调 > 五声布鲁斯 > 和声小调 > 旋律小调 >
+   和声大调 > 双和声小调 > 异域 / Bebop > 对称 > 琶音），再按组内是不是母音阶、
+   再按音数、最后才看「低音是不是某个读法的主音」（只是微调，翻不过体系那一层）。
+   ============================================================ */
+const SQK_GROUP_W = { major:0, pent:1, harm:2, mel:3, harmaj:4, dblmin:5, exotic:6, sym:7, arp:8 };
+const SQK_PARENT = {};
+GROUPS.forEach(g => { if (g.parentOf) SQK_PARENT[g.id] = g.parentOf; });
+let SQK_CAT = null, SQK_LAST = null;
+
+/* 音高类去重 + 升序（琶音表里有几条 iv 不是升序，必须先归一化） */
+function uniqPcs(list){
+  const out = [];
+  list.forEach(x => { const v = ((x % 12) + 12) % 12; if (out.indexOf(v) < 0) out.push(v); });
+  return out.sort((a,b) => a - b);
+}
+/* 全库读法表：每条 = { 音阶, 主音, 音高类集合 } */
+function sqCatalog(){
+  if (SQK_CAT) return SQK_CAT;
+  const out = [];
+  SCALES.forEach(sc => {
+    const base = uniqPcs(sc.iv);
+    for (let r = 0; r < 12; r++){
+      const pcs = uniqPcs(base.map(x => x + r));
+      if (pcs.length !== base.length) continue;   /* 音高类塌陷的读法不成立 */
+      out.push({ sc:sc, tonic:r, pcs:pcs, key:pcs.join(',') });
+    }
+  });
+  SQK_CAT = out;
+  return out;
+}
+/* 这组音「转几个半音之后还是它自己」—— 空数组 = 不对称。
+   七声音阶永远是不对称的（七个音级各不相同），所以它只会有「换主音」这一种歧义；
+   全音阶 / 减音阶 / 增音阶 / 半音阶 / 五声音阶则会连主音都分不出来。 */
+function sqSymmetry(pcs){
+  const s = new Set(pcs), out = [];
+  for (let d = 1; d < 12; d++) if (pcs.every(x => s.has((x + d) % 12))) out.push(d);
+  return out;
+}
+function sqReadScore(r){
+  const gid = r.sc.g || 'major';
+  const gw = (SQK_GROUP_W[gid] === undefined) ? 9 : SQK_GROUP_W[gid];
+  return gw * 10 + ((SQK_PARENT[gid] === r.sc.id) ? 0 : 1);
+}
+function sqSearch(pcsIn, tonic){
+  const P = uniqPcs(pcsIn);
+  const byKey = {};
+  sqCatalog().forEach(c => {
+    if (tonic >= 0 && c.tonic !== tonic) return;
+    if (!P.every(x => c.pcs.indexOf(x) >= 0)) return;
+    (byKey[c.key] || (byKey[c.key] = { key:c.key, pcs:c.pcs, reads:[] })).reads.push(c);
+  });
+  const bass = pickLow(), bassPc = bass ? bass.pc : -1;
+  const rows = Object.keys(byKey).map(k => {
+    const g = byKey[k];
+    g.reads.sort((a,b) => sqReadScore(a) - sqReadScore(b) || a.tonic - b.tonic);
+    g.extra = g.pcs.filter(x => P.indexOf(x) < 0);
+    g.score = sqReadScore(g.reads[0]);
+    g.sym   = sqSymmetry(g.pcs);
+    g.bassRoot = (bassPc >= 0 && g.reads.some(r => r.tonic === bassPc)) ? 0 : 1;
+    /* 这一组音在**全部主音**下的读法 —— 细匹配把主音限死之后，
+       这些就是被排除掉的那半，正是「母音阶组」要摆出来的东西 */
+    g.all  = sqCatalog().filter(c => c.key === g.key)
+                        .sort((a,b) => sqReadScore(a) - sqReadScore(b) || a.tonic - b.tonic);
+    g.alts = g.all.filter(c => !g.reads.some(x => x.sc.id === c.sc.id && x.tonic === c.tonic));
+    return g;
+  });
+  rows.sort((a,b) => a.extra.length - b.extra.length || a.score - b.score
+                  || a.pcs.length - b.pcs.length || a.bassRoot - b.bassRoot
+                  || a.reads[0].tonic - b.reads[0].tonic);
+  return { P:P, rows:rows, tonic:tonic };
+}
+/* 同一组音的全部读法 —— 每个都是一颗「以此为主音进细匹配」的按钮 */
+function sqReadsHTML(g){
+  const cap = 10;
+  let h = '<div class="sqset">';
+  g.reads.slice(0, cap).forEach(r => {
+    const on = (SQK.mode === 'fine' && r.tonic === SQK.ton);
+    h += '<button data-sqton="' + r.tonic + '"' + (on ? ' class="on"' : '') + ' title="以 '
+       + nameOf(r.tonic, S.flats) + ' 为主音进细匹配">'
+       + nameOf(r.tonic, S.flats) + ' ' + r.sc.cn + '</button>';
+  });
+  if (g.reads.length > cap) h += '<span class="more">…另 ' + (g.reads.length - cap) + ' 个读法</span>';
+  return h + '</div>';
+}
+function sqRowHTML(g, rank){
+  const extra = g.extra;
+  const lead  = g.reads[0];
+  const sym = g.sym.length
+    ? '<span class="sym">对称 · 转 ' + g.sym.join('/') + ' 个半音还是它</span>' : '';
+  const why = ['音阶音 ' + g.pcs.map(x => nameOf(x, S.flats)).join(' ')];
+  if (extra.length) why.push('没点到的 ' + extra.map(x => nameOf(x, S.flats)).join(' '));
+  else why.push('刚好用完你点的音');
+  if (g.reads.length > 1) why.push('同一组音 ' + g.reads.length + ' 个读法');
+  const pct = Math.max(8, Math.min(100, 104 - extra.length * 15 - rank * 2));
+  let h = '<div class="mres"><div class="mh">'
+    + '<span class="tag">' + (extra.length ? '还差 ' + extra.length + ' 音' : '一个不多') + '</span>'
+    + '<span class="nm">' + nameOf(lead.tonic, S.flats) + ' ' + lead.sc.cn + '</span>'
+    + '<span class="dsc">' + g.pcs.length + ' 音</span>' + sym + '</div>'
+    + '<div class="why">' + why.join(' · ') + '</div>'
+    + sqReadsHTML(g);
+  if (g.alts.length){
+    h += '<div class="why">同一组音另有读法（主音不在你说的那个上）—— 点一下可以换过去：</div>';
+    h += '<div class="sqset alt">' + g.alts.slice(0, 10).map(r =>
+      '<button data-sqton="' + r.tonic + '" title="改以 ' + nameOf(r.tonic, S.flats) + ' 为主音">'
+      + nameOf(r.tonic, S.flats) + ' ' + r.sc.cn + '</button>').join('')
+      + (g.alts.length > 10 ? '<span class="more">…另 ' + (g.alts.length - 10) + ' 个</span>' : '')
+      + '</div>';
+  }
+  if (g.sym.length)
+    h += '<div class="why">转 ' + g.sym.join(' / ') + ' 个半音之后还是同一组音 ——'
+       + ' 光看音高类分不出哪个才是主音，只能给出<b>母音阶组</b>，请按上下文定。</div>';
+  h += '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+  return h;
+}
+/* ---------- 总入口 ---------- */
+function sqMatchHTML(pcs){
+  const P = uniqPcs(pcs);
+  const low = pickLow();
+  const tonic = (SQK.mode === 'fine') ? SQK.ton : -1;
+  const R = sqSearch(P, tonic);
+  SQK_LAST = R;
+  let h = '<div class="tip" style="margin-bottom:11px">点出的音：'
+    + P.map(x => '<b>' + nameOf(x, S.flats) + '</b>').join(' · ')
+    + (low ? '（低音 <b>' + nameOf(low.pc, S.flats) + '</b>）' : '')
+    + (tonic >= 0 ? ' · 已定主音 <b>' + nameOf(tonic, S.flats) + '</b>' : '') + '</div>';
+  if (!R.rows.length){
+    return h + '<div class="tip">全库 × 12 个主音都找不到装得下这几个音的音阶 ——'
+      + ' 要么其中有外音，要么主音定错了。换个主音、或者把可疑的那颗音点掉再试。</div>';
+  }
+  const layers = { 0:[], 1:[], 2:[], 3:[] };
+  R.rows.forEach(r => layers[Math.min(r.extra.length, 3)].push(r));
+  const LABEL = { 0:'完全吻合 —— 一个音都不多', 1:'还差 1 个音', 2:'还差 2 个音', 3:'还差 3 个音以上' };
+  const CAP   = { 0:14, 1:14, 2:14, 3:10 };
+  [0,1,2,3].forEach(k => {
+    const arr = layers[k]; if (!arr.length) return;
+    h += '<div class="sqsec">' + LABEL[k] + '<b>' + arr.length + '</b> 组</div>'
+      + '<div class="mreslist">';
+    arr.slice(0, CAP[k]).forEach((g, i) => { h += sqRowHTML(g, i); });
+    if (arr.length > CAP[k])
+      h += '<div class="why">…同档另 ' + (arr.length - CAP[k]) + ' 组（按体系常见度截断）</div>';
+    h += '</div>';
+  });
+  h += '<div class="tip" style="margin-top:10px">点读法上的任意一个名字，就把那个主音带进'
+    + ' <b>细匹配</b>；「还差几个音」= 这个音阶里还有几个音你没点出来。'
+    + '同一组音若有多个读法，说明它本身就定不到唯一一个音阶 —— 这就是<b>母音阶组</b>。'
+    + '判据是「<b>你点的音能同时全部放进这个音阶</b>」，比「点出音之间的每个音程都能在音阶里找到」更严 ——'
+    + '后者会把一些装不下的组合也算进来。</div>';
+  return h;
+}
+function cqResults(){
+  const el = $('cqResult'); if (!el) return;
+  const pcs = pickPcs(), need = 3, hid = pickHidden();
+  if (pcs.length < need){
+    /* 「位置数」与「音高类数」是两回事 —— 同一个音在两个把位各点一下只算一个音。
+       不把这句说清楚，用户会以为「明明点了 3 下怎么还说不够」。 */
+    el.innerHTML = '<div class="tip">还差 <b>' + (need - pcs.length) + ' 个音</b> —— 现在点上 '
+      + QF.sel.length + ' 个位置、凑出 ' + pcs.length + ' 个不同的音'
+      + (QF.sel.length > pcs.length ? '（同一个音换把位点，只算一个音）' : '')
+      + (hid ? '；其中 ' + hid + ' 处不在当前显示范围里，仍然算数（左侧已标出）' : '')
+      + '。</div>';
+    $('cqResHint').textContent = pcs.length + ' / ' + need + ' 音';
+    return;
+  }
+  el.innerHTML = cqMatchHTML(pcs);
+  /* 命中 0 条时也要写出来 —— 标题右边空着会让人以为工具没跑 */
+  $('cqResHint').textContent = (CQ_LAST && CQ_LAST.n) ? (CQ_LAST.n + ' 条读法') : '无命中';
+}
+function sqResults(){
+  const el = $('sqResult'); if (!el) return;
+  const pcs = pickPcs(), need = 5, hid = pickHidden();
+  if (pcs.length < need){
+    el.innerHTML = '<div class="tip">还差 <b>' + (need - pcs.length) + ' 个音</b> —— 现在点上 '
+      + QF.sel.length + ' 个位置、凑出 ' + pcs.length + ' 个不同的音'
+      + (QF.sel.length > pcs.length ? '（同一个音换把位点，只算一个音）' : '')
+      + (hid ? '；其中 ' + hid + ' 处不在当前显示范围里，仍然算数（左侧已标出）' : '')
+      + '。</div>';
+    $('sqResHint').textContent = pcs.length + ' / ' + need + ' 音';
+    if ($('sqTonInfo')) $('sqTonInfo').textContent = '';
+    return;
+  }
+  el.innerHTML = sqMatchHTML(pcs);
+  const R = SQK_LAST;
+  $('sqResHint').textContent = R ? (R.rows.length + ' 组音') : '';
+  if ($('sqTonInfo')) $('sqTonInfo').innerHTML = (R && R.tonic >= 0)
+    ? ('以 <b>' + nameOf(R.tonic, S.flats) + '</b> 为主音：'
+       + R.rows.length + ' 组音装得下这几个音 —— 还是定不到唯一一个时，就看同一组音的读法。')
+    : '还没指定主音 —— 下面是全库 × 12 个主音的结果。';
+}
+
 /* ---------------- 启动 ---------------- */
 function boot(){
   FB.explore = $('fbExplore');
   FB.train   = $('fbTrain');
   initControls();
   bind();
+  bindPickPages();
   initDove();
   renderGameOpts();
   renderLibFilters();

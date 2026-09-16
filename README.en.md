@@ -41,13 +41,13 @@ No Node, no build step, no network, no install.
 Everything is embedded in the file — the page issues **no network requests at all**.
 Preferences (key, tuning, theme) go to `localStorage` and never leave your machine.
 
-## The eleven tabs
+## The thirteen tabs
 
 | Tab | What it does |
 |---|---|
 | 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio |
 | 🧠 **Practice** | "Find the note" — tap *every* position of a named pitch; "Scale ear training" — identify a mode by ear, drilled in 8 parent-scale families |
-| 📚 **Scale Library** | 81 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
+| 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
 | 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key |
 | 🧮 **Scale & Harmony** | Seven degrees × five chord-tone extension layers; click any cell to jump to its shape |
 | 🎼 **Arpeggio Explorer** | One arpeggio across the five CAGED positions, plus which scales it usually pairs with |
@@ -56,25 +56,29 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | 🔍 **Improvisation Lookup** | Given a chord quality and key, list usable scales, arpeggios and substitutions |
 | 🎹 **Voicing** | Treat the whole progression as one object and search for the lowest total hand travel; returns several distinct optima |
 | 🖐 **2-1-2 Arpeggios** | Arpeggio shapes built on a `2-1-2` notes-per-string alternation, starting from the 6th / 5th / 4th / 3rd string |
+| 🎯 **Chord Lookup** | The other direction: tap notes on the neck (3 or more) to **name the chord**. Coarse / degree-aware / diatonic modes; a non-root bass becomes a slash chord; when nothing fits, it falls back to the five trichord families (root removed, six notes split into two groups of three) |
+| 🎼 **Scale Lookup** | Tap notes on the neck (5 or more) to **find the scale**. All 82 scales × 12 tonics = 984 readings, layered by "how many notes you are still missing". Every reading of the same pitch-class set is listed side by side — which is why a seven-note scale can only ever be pinned down to its **parent-scale group** |
 
 ## Data
 
 | Item | Count |
 |---|---|
-| Scales / arpeggios | **81** across **9** families |
-| Mode colour profiles | **58** |
-| Fingering systems | **10** (3NPS, 4NPS, wide pentatonic, 3-1-3, 2-1-2, 2-1-2 basic, 2NPS, CAGED, position window, unsegmented). **9** are visible at a time — major / minor pentatonic swaps 4NPS for wide pentatonic |
+| Scales / arpeggios | **82** across **9** families |
+| Mode colour profiles | **59** |
+| Fingering systems | **10** (3NPS, 4NPS, wide, 3-1-3, 2-1-2, 2-1-2 basic, 2NPS, CAGED, position window, unsegmented). **9** are visible at a time — all **12** scales of the pentatonic / blues family swap 4NPS for the wide form (every scale tone inside one 7-fret position window) |
 | Tunings | **17** (6-string guitar 10, 7-string 5, 4-string bass 1, 5-string bass 1) |
 | Chord qualities | **23** |
 | Chord progressions | **456** |
 | Backing tracks | **200** |
 | String groups | **16** |
+| Chord qualities for note-tapping | **46** (wider than the 23 used by the improvisation lookup: sixth chords, 9th / 11th / 13th, altered dominants, and every no-5 / no-3 form) |
+| Scale readings for note-tapping | **984** (82 scales × 12 tonics; readings whose pitch classes collapse are excluded) |
 
 All counts are produced by the page's own runtime — they are not marketing copy.
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **9,271 lines / 654 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **11,388 lines / 769 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
