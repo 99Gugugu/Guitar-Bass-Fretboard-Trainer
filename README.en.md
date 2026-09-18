@@ -49,13 +49,13 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | 🎵 **Fretboard Practice** | Modular sequence practice: pick a scale → pick **specific position blocks** (multi-select, even across fingering systems, re-orderable) → give each block one of **8 walk modes**. Blocks are walked one at a time, with fretboard and score highlighting in sync |
 | 🎧 **Ear & Sight Practice** | Seven drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, **staff sight reading** and **numbered-notation (jianpu) sight reading** — same "read it, then tap it in order on the neck", once from a staff with key signature and rhythm (the staff follows the tuning), once from movable-do numbers (6 system entries × 7 sub-scales each = 42) |
 | 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
-| 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key |
+| 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key. Ships a **capo**: with the capo on fret N the shapes are those of "root minus N semitones", fret numbers are written relative to the capo, and each card also states the frets you actually play |
 | 🧮 **Scale & Harmony** | Seven degrees × five chord-tone extension layers; click any cell to jump to its shape |
 | 🎼 **Arpeggio Explorer** | One arpeggio across the five CAGED positions, plus which scales it usually pairs with |
 | 🔗 **Progression Trainer** | 456 chord progressions with note-by-note voice leading and recommended fingerings |
 | 🎸 **Jam** | 200 backing tracks. The progression is laid out bar by bar, then the **minimum-hand-travel** voicings, then the improvisation material available over each chord |
 | 🔍 **Improvisation Lookup** | Given a chord quality and key, list usable scales, arpeggios and substitutions |
-| 🎹 **Voicing** | Two modes: **best voice leading** treats the whole progression as one object and searches for the lowest total hand travel (returning several distinct optima); **most common / easiest** picks each chord independently by textbook criteria (first position first, no gap inside the string group, fewest fingers…) — the equivalent of reading a chord chart |
+| 🎹 **Voicing** | Two modes: **best voice leading** treats the whole progression as one object and searches for the lowest total hand travel (returning several distinct optima); **most common / easiest** picks each chord independently by textbook criteria (first position first, no gap inside the string group, fewest fingers…) — the equivalent of reading a chord chart, and besides the "most common" fingering it offers one scheme per low / mid / high register so the same chord can be compared across positions. A **capo** is available in both modes: set it to fret N and the whole progression is recomputed |
 | 🖐 **2-1-2 Arpeggios** | Arpeggio shapes built on a `2-1-2` notes-per-string alternation, starting from the 6th / 5th / 4th / 3rd string |
 | 🎯 **Chord Lookup** | The other direction: tap notes on the neck (3 or more) to **name the chord**; tap exactly two notes and it names their **interval** and checks whether they form a power chord (`X5`). Coarse / degree-aware / diatonic modes; a non-root bass becomes a slash chord; when nothing fits, it falls back to the five trichord families (root removed, six notes split into two groups of three) |
 | 🎼 **Scale Lookup** | Tap notes on the neck (5 or more) to **find the scale**. All 82 scales × 12 tonics = 984 readings, layered by "how many notes you are still missing". Every reading of the same pitch-class set is listed side by side — which is why a seven-note scale can only ever be pinned down to its **parent-scale group** |
@@ -198,6 +198,7 @@ The button subtitle reads "**ends on string X, fret Y**" — that is the *actual
 | Chord progressions | **456** |
 | Backing tracks | **200** |
 | String groups | **16** |
+| Voicing · schemes | Up to **3** solutions in mode one (one per low / mid / high register); up to **4** in mode two (the most-common fingering, plus one per register). Capo spans frets **0–9** |
 | Practice · pickable positions | **81** (pentatonic / blues) / **94** (six-note) / **107** (seven-, eight-note) across 8 fingering systems and **19** rows; the CAGED column is split by shape and lists every fret position of each shape low-to-high |
 | Practice · walk modes | **8** |
 | Fretboard score · pagination | at most **18** notes per row, split evenly — the only boundary rule |
@@ -208,7 +209,7 @@ All counts are produced by the page's own runtime — they are not marketing cop
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **15,764 lines / 1047 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **15,877 lines / 1055 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
