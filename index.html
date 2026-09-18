@@ -1224,7 +1224,7 @@ body{padding-bottom:74px}
   <section class="page" id="page-caged" data-page-node-id="Ksi35G7jWUHyXi8fPY51CP">
     <div class="card" data-page-node-id="w6Klsg31vfJBKoKDi9BNnX">
       <div class="card-t" data-page-node-id="fBvH8vhC0LRINMMbAEZPAE"><h3 data-page-node-id="p4UgQJnLLDgdsXBeVita8n">CAGED 五大指型</h3><span class="hint" data-page-node-id="aMOfphFKyY72FXHjXHSsGS">同一个和弦在指板上的 5 个位置，串联起来即可覆盖整个指板</span></div>
-      <div class="row" style="max-width:520px;margin-bottom:14px" data-page-node-id="5SharQfosNOT8Fc1vX9Ehg">
+      <div class="row" style="max-width:780px;margin-bottom:14px" data-page-node-id="5SharQfosNOT8Fc1vX9Ehg">
         <div class="field" style="margin:0" data-page-node-id="qCM2UY39ftcgboxIxOfYCq">
           <label data-page-node-id="DNLkFfRRdAskfKev2mAqDo">和弦根音</label>
           <select class="inp" id="chordRoot" data-page-node-id="JmEIFq491OsJSZJxsg69Bd"></select>
@@ -1236,6 +1236,10 @@ body{padding-bottom:74px}
             <option value="min" data-page-node-id="W9AOiG1majnCLHNHU1AAzA">小三和弦 Minor</option>
             <option value="dom7" data-page-node-id="LIL7w1alfSnhVwBQiLmbl2">属七和弦 Dominant 7</option>
           </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>变调夹</label>
+          <select class="inp" id="cagedCapo"></select>
         </div>
       </div>
       <div class="caged-grid" id="cagedGrid" data-page-node-id="MJmFfCbnG6YZLzKuCw3UuD"></div>
@@ -1437,6 +1441,10 @@ body{padding-bottom:74px}
         <div class="field" style="margin:0">
           <label>品格上限</label>
           <select class="inp" id="vcSpan"></select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>变调夹</label>
+          <select class="inp" id="vcCapo"></select>
         </div>
         <div class="field" style="margin:0">
           <label>按法模式</label>
@@ -4558,6 +4566,13 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   S.vcScheme = num(S.vcScheme, 0, 0, 8);
   S.vcShowAll = !!S.vcShowAll;
   S.vcMode   = (S.vcMode === 'easy') ? 'easy' : 'lead';
+  /* 变调夹（第 77 轮）：0 = 不夹，1~9 = 夹在第 N 品。**只作用于「和弦配置」与
+     「CAGED 和弦」两页**，其它指板页不读这个字段。老存档没有它 → 落 0，
+     于是升级后界面与结果逐字节不变。
+     ⚠ 语义（两页同一套）：夹上之后等于**琴枕上移 N 品**，指法数字一律「相对变调夹」写
+     （0 = 就在夹子处按弦，与不夹时的空弦同位置）；发声音高 = 空弦 + N + 相对品，
+     所以「选 X 和弦 + 夹 N 品」按出来的是 (X − N) 那个型，实际发声仍是 X。 */
+  S.vcCapo = num(S.vcCapo, 0, 0, 9);
   /* 音阶听辨：勾选了哪些体系（该体系的母音阶 + 全部子音阶一起进题库） */
   if (!Array.isArray(S.modeGroups)) S.modeGroups = ['major'];
   S.modeGroups = S.modeGroups.filter(id => EAR_GROUPS.some(g => g.id === id));
@@ -6881,6 +6896,13 @@ function cagedOrderByPos(forms, root, mid){
 function renderCaged(){
   const root = parseInt($('chordRoot').value, 10) || 0;
   const qual = $('chordQual').value;
+  /* 变调夹（第 77 轮）：夹在第 N 品等于**琴枕上移 N 品**，于是「想发出 root 这个和弦」
+     就要按 (root − N) 那个型的落位，品位数字一律相对变调夹写。
+     ⚠ capo = 0 时 rootEff === root、下面的附加文案全部不输出，
+     本函数渲染结果与加变调夹之前逐字节一致。 */
+  const capo    = S.vcCapo || 0;
+  const rootEff = capo ? (((root - capo) % 12) + 12) % 12 : root;
+  if ($('cagedCapo')) $('cagedCapo').value = String(capo);
   const t = tuning();
   const bass = isBassInst();
   const inst = instOf();
@@ -6931,6 +6953,14 @@ function renderCaged(){
         + '音一定没错（挑的都是和弦音），但手型不一定最顺手，练的时候以好按、听得准为先。';
     }
   }
+  /* 变调夹说明：接在各个口径说明后面（capo = 0 时不输出，老文案逐字节不变） */
+  if (capo && $('cagedTip')){
+    $('cagedTip').innerHTML += '<br>变调夹：夹在<b>第 ' + capo + ' 品</b> —— '
+      + '下面的指法数字与品位标记一律<b>相对变调夹</b>（0 = 就在夹子处按弦）。'
+      + '所以这五张图是「按 <b>' + noteName(rootEff) + ' 型</b>」的落位，'
+      + '实际发出来的是 <b>' + noteName(root) + ' ' + qi.cn + '</b>。'
+      + '夹子越低越省手指、声音越高；不夹时把变调夹切回「不夹」即可。';
+  }
   if (!forms){
     $('cagedGrid').innerHTML = '<div class="empty">该和弦性质暂无' + (bass ? '贝斯' : '吉他') + '指型数据。</div>';
     return;
@@ -6938,7 +6968,7 @@ function renderCaged(){
   const N = t.mid.length;
   /* 显示次序 = 按「该型实际最低音品」升序：最左边一定是品位最低的那个型，
      无论选哪个调（见 cagedOrderByPos） */
-  const order = cagedOrderByPos(forms, root, t.mid);
+  const order = cagedOrderByPos(forms, rootEff, t.mid);
   const book = cagedIsBook(qual);
   const toneNames = qi.iv.map(i => noteName((root + i) % 12)).join(' ');
   /* 显示用的音级名：指型表里的 deg 是**音阶口径**的音级名（NUM，一个半音数只配
@@ -6967,7 +6997,7 @@ function renderCaged(){
   const html = order.map((k, oi) => {
     const fm = forms[k];
     if (!fm) return '';
-    const pos = cagedFormPos(fm, root, t.mid);
+    const pos = cagedFormPos(fm, rootEff, t.mid);
     if (!pos) return '';
     const af = pos.af, minF = pos.minF, maxF = pos.maxF;
     const frets = fm.off.map(o => o === null ? null : o + af);
@@ -6996,18 +7026,19 @@ function renderCaged(){
       g += '<line x1="' + sx(i) + '" y1="' + PADT + '" x2="' + sx(i) + '" y2="' + (PADT + span * SH)
         + '" style="stroke:var(--string)" stroke-width="' + (2.6 - i * 0.24) + '"/>';
     }
-    /* 把位标记 */
-    for (let j = 0; j < span; j++){
-      const f = startF + j;
-      if ([3,5,7,9,12,15,17,19,21].indexOf(f) < 0) continue;
+    /* 把位标记：物理 3/5/7/9/12… 品上的圆点，换算到「相对变调夹」的坐标系里画。
+       取值仍是升序、范围仍是 [startF, startF+span)，所以 capo = 0 时逐字节不变；
+       双重圆点认的是**物理第 12 品**（f + capo === 12），不是相对第 12 品。 */
+    [3,5,7,9,12,15,17,19,21].map(f0 => f0 - capo).forEach(f => {
+      if (f < startF || f >= startF + span) return;
       const y = cyOf(f);
-      if (f === 12){
+      if (f + capo === 12){
         g += '<circle cx="' + sx(midA) + '" cy="' + (y - SH / 2) + '" r="3" style="fill:var(--dot)"/>';
         g += '<circle cx="' + sx(midA + 1) + '" cy="' + (y + SH / 2) + '" r="3" style="fill:var(--dot)"/>';
       } else {
         g += '<circle cx="' + ((sx(midA) + sx(midA + 1)) / 2) + '" cy="' + y + '" r="3.4" style="fill:var(--dot)"/>';
       }
-    }
+    });
     /* 品位数字 */
     g += '<text x="' + (PADL - 7) + '" y="' + cyOf(startF) + '" dy=".35em" text-anchor="end" font-size="10" font-weight="700" style="fill:var(--muted)">' + startF + '</text>';
     g += '<text x="' + (PADL - 7) + '" y="' + cyOf(startF + span - 1) + '" dy=".35em" text-anchor="end" font-size="10" font-weight="700" style="fill:var(--muted)">' + (startF + span - 1) + '</text>';
@@ -7037,7 +7068,9 @@ function renderCaged(){
       + '<h4>' + fm.name
       + '<span class="pill" style="margin-left:6px">' + (book ? '原书实测' : '推导') + '</span>'
       + '</h4>'
-      + '<div class="meta">第 ' + (oi + 1) + ' 把位 · 第 ' + minF + '–' + maxF + ' 品</div>'
+      + '<div class="meta">第 ' + (oi + 1) + ' 把位 · 第 ' + minF + '–' + maxF + ' 品'
+      + (capo ? '（数字相对变调夹；实际弹在第 ' + (minF + capo) + '–' + (maxF + capo) + ' 品）' : '')
+      + '</div>'
       + g
       + '<div class="tones">' + noteName(root) + qi.cn + '：' + toneNames + '</div>'
       + '</div>';
@@ -8978,7 +9011,14 @@ function vcEasyCmp(a, b){
        这两条根本进不了候选池）。⚠ 声部**下限**两种模式一致（吉他 4 / 贝斯 3）：
        第四版曾让易按模式把吉他放开到 3 声部，结果「2 根手指的 3 音薄按法」把教材形状全挤下去。
    **不传时逐字节沿用老口径** —— 声部连接那套算法完全不受影响。 */
-function vcCands(it, mid, easy){
+function vcCands(it, mid, easy, capo){
+  /* 第四参 capo（第 77 轮新增，**可选**）：变调夹品数。夹上之后琴枕整体上移 N 品，
+     所以「不夹时按某个型」在这里完全等价于「把 mid 整体升 N 个半音、相对品数照旧」——
+     枚举、打分、成本公式一行都不用改，而 midi 一律是真实发声音高，
+     于是试听 / 声部连接 / 和弦音校验全部自动跟着对。
+     **不传时逐字节沿用老口径**（capo = 0 时 midC === mid，连数组都不复制）。 */
+  const cp   = (capo | 0) || 0;
+  const midC = cp ? mid.map(m => m + cp) : mid;
   const iv   = it.q.iv;
   const root = it.root;
   const pcs  = iv.map(i => (((root + i) % 12) + 12) % 12);
@@ -8995,7 +9035,11 @@ function vcCands(it, mid, easy){
      **两种模式同一个下限**：第 72 轮第四版曾经让易按模式把吉他放开到 3 声部，
      结果「2 根手指的 3 音薄按法」（F = 103xxx、C = x320xx）把教材形状全挤了下去。 */
   const minSnd = (n >= 6 ? 4 : 3);
-  const win  = S.vcWin, fretsMax = Math.min(24, S.vcSpan);
+  const win  = S.vcWin;
+  /* 品格上限是**相对**上限：夹了变调夹之后琴颈可用的长度少了一截，
+     所以绝对 24 品要减去 capo；但不能把窗口整个挤没（capo 大、品格上限小时
+     至少要留一个窗口），否则会表现成「无解」。 */
+  const fretsMax = Math.max(win + 1, Math.min(24, S.vcSpan) - cp);
   const out  = [];
 
   for (let lo = 0; lo + win <= fretsMax; lo++){
@@ -9007,7 +9051,7 @@ function vcCands(it, mid, easy){
       for (let f = 0; f <= hi; f++){
         if (f === 0){ if (lo > 2) continue; }          /* 空弦只在低把位窗口里算数 */
         else if (f < lo) continue;
-        const pc = (((mid[s] + f) % 12) + 12) % 12;
+        const pc = (((midC[s] + f) % 12) + 12) % 12;
         if (allowed.indexOf(pc) >= 0) list.push(f);
       }
       opts.push(list);
@@ -9032,7 +9076,7 @@ function vcCands(it, mid, easy){
         for (let i = 0; i < n; i++){
           const f = pick[i];
           if (f === null) continue;
-          const m2 = mid[i] + f;
+          const m2 = midC[i] + f;
           const pc = (((m2) % 12) + 12) % 12;
           const off = (((pc - root) % 12) + 12) % 12;
           notes.push({ s:i, f:f, midi:m2, pc:pc, off:off, lab:chordToneDeg(iv, off, true) });
@@ -9250,31 +9294,56 @@ function vcDP(cands){
    相当于翻一本和弦表，每个和弦各挑各的。所以它不保证整条进行好弹，
    只保证每个和弦自己好按；两条路是两种不同的目标，不是同一个算法的两档。
    输出结构与模式一保持一致，外加上 mode 与每题易按成本，渲染层不必分两套。 */
-function vcSolveEasy(items, mid){
-  const cands = items.map(it => vcCands(it, mid, true));
+function vcSolveEasy(items, mid, capo){
+  const cp    = (capo | 0) || 0;
+  const cands = items.map(it => vcCands(it, mid, true, cp));
   for (let i = 0; i < cands.length; i++)
-    if (!cands[i].length) return { cands:cands, schemes:[], mode:'easy',
+    if (!cands[i].length) return { cands:cands, schemes:[], mode:'easy', capo:cp,
                                    failAt:i, failName:items[i].label, failDeg:items[i].deg };
   /* cands[i] 已按易按成本**升序**排好，[0] 就是「和弦表上那一个」；
-     候选对象上的 score 在易按模式下 = -vcEasyCost，取负就是成本。 */
-  const vs = cands.map(cs => cs[0]);
-  let hs = 0, sm = 0, fg = 0;
-  for (let i = 1; i < vs.length; i++){
-    const mp = vcPair(vs[i - 1], vs[i]);
-    hs += mp.hand; sm += mp.semi; fg += mp.finger;
-  }
-  const easyCost = vs.map(v => -v.score);
-  return { cands:cands, mode:'easy', failAt:-1, schemes:[
-    { label:'常用按法', band:'easy', easy:true, cost:easyCost.reduce((a, b) => a + b, 0),
-      easyCost:easyCost, avgPos:vcAvgPos(vs), handSum:hs, semiSum:sm, fingerSum:fg,
-      voicings:vs } ] };
+     候选对象上的 score 在易按模式下 = -vcEasyCost，取负就是成本。
+
+     第 77 轮：一个和弦在**不同把位**上的常用按法本来就不是同一条
+     （C 在第 1 品是 x32010，第 3 品是 x35553，第 8 品又是另一条），
+     所以除了「整条最省的那一个」，再按低 / 中 / 高把位区各给一个方案。
+     ⚠ 每个和弦仍然**各挑各的**，不做任何跨和弦配对 —— 这一点与第 72 轮一致：
+     模式二回答的是「这个和弦怎么按」，不是「这条进行怎么连」。 */
+  const mk = (label, bandId, bandObj, pickOne) => {
+    const vs = cands.map(pickOne);
+    if (vs.some(v => !v)) return null;             /* 有一个和弦在该区无解 → 这个方案不成立 */
+    let hs = 0, sm = 0, fg = 0;
+    for (let i = 1; i < vs.length; i++){
+      const mp = vcPair(vs[i - 1], vs[i]);
+      hs += mp.hand; sm += mp.semi; fg += mp.finger;
+    }
+    const easyCost = vs.map(v => -v.score);
+    return { label:label, band:bandId, bandObj:bandObj, easy:true,
+             cost:easyCost.reduce((a, b) => a + b, 0), easyCost:easyCost,
+             avgPos:vcAvgPos(vs), handSum:hs, semiSum:sm, fingerSum:fg, voicings:vs };
+  };
+  const schemes = [], seen = {};
+  const add = sc => {
+    if (!sc) return;
+    /* 与模式一同一个去重口径：按「实际按法指纹」去重，不用候选下标 */
+    const key = sc.voicings.map(v => v.frets.map(f => f === null ? 'x' : f).join('.')).join('|');
+    if (seen[key]) return;
+    seen[key] = 1; schemes.push(sc);
+  };
+  /* ① 全局：每个和弦取整条琴颈上最省的那一个 = 教材和弦表上那一个 */
+  add(mk('常用按法', 'easy', null, cs => cs[0]));
+  /* ② 低 / 中 / 高把位区各一个：区内取最省的那一个（VC_BANDS 与模式一共用） */
+  VC_BANDS.forEach(bd => add(mk(bd.cn + '常用按法', bd.id, bd,
+    cs => cs.filter(c => c.lo >= bd.lo && c.lo <= bd.hi)[0])));
+  return { cands:cands, mode:'easy', capo:cp, failAt:-1, schemes:schemes };
 }
 
 /* 求解整条进行：全局最优 + 低 / 中 / 高把位各一个解。
-   第三参 mode 传 'easy' 时走模式二；**不传 = 老口径**（玩点即兴那条路径照旧）。 */
-function vcSolve(items, mid, mode){
-  if (mode === 'easy') return vcSolveEasy(items, mid);
-  const cands = items.map(it => vcCands(it, mid));
+   第三参 mode 传 'easy' 时走模式二；第四参 capo 传变调夹品数（可选）。
+   **两个参数都不传 = 老口径**：只有「和弦配置」页在调 capo 时才传它，
+   「玩点即兴」那条路径（vcSolve(items, mid)）照旧逐字节不变。 */
+function vcSolve(items, mid, mode, capo){
+  if (mode === 'easy') return vcSolveEasy(items, mid, capo);
+  const cands = items.map(it => vcCands(it, mid, false, capo));
   for (let i = 0; i < cands.length; i++)
     if (!cands[i].length) return { cands:cands, schemes:[], failAt:i, failName:items[i].label, failDeg:items[i].deg };
   const picked = [], seen = {};
@@ -9396,6 +9465,12 @@ function vcFillControls(){
     .map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
   $('vcSpan').value = S.vcSpan;
   if ($('vcMode')) $('vcMode').value = (S.vcMode === 'easy') ? 'easy' : 'lead';
+  /* 变调夹（第 77 轮）：两个页面共用一份选项。0~9 品 —— 吉他上 1~7 是常规区间，
+     再高不如换把位或换定弦，留到 9 只是给特殊需求让路。 */
+  const capoHTML = [[0, '不夹']].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => [n, '第 ' + n + ' 品']))
+    .map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
+  if ($('vcCapo'))    { $('vcCapo').innerHTML    = capoHTML; $('vcCapo').value    = String(S.vcCapo); }
+  if ($('cagedCapo')) { $('cagedCapo').innerHTML = capoHTML; $('cagedCapo').value = String(S.vcCapo); }
 }
 
 let vcJob = 0;
@@ -9424,8 +9499,9 @@ function vcRenderNow(){
     return;
   }
   const items = progItems();
+  const capo  = S.vcCapo || 0;                       /* 0 = 不夹（老口径） */
   const t0 = Date.now();
-  const res = vcSolve(items, mid, S.vcMode === 'easy' ? 'easy' : 'lead');
+  const res = vcSolve(items, mid, S.vcMode === 'easy' ? 'easy' : 'lead', capo);
   const easyMode = res.mode === 'easy';
   const ms  = Date.now() - t0;
   if (!res.schemes.length){
@@ -9479,6 +9555,12 @@ function vcRenderNow(){
     + '空弦单独优待：两根都是空弦时这一声部不花力气，但整套按法的把位必须整条一致。'
     + '「手挪 ∑」整条进行手位一共挪了多少品、「均」该方案所有按法的平均把位，都是越小越省力。');
   }
+  if (capo){
+    lines.push('变调夹：夹在<b>第 ' + capo + ' 品</b>。下面所有指法数字一律<b>相对变调夹</b>'
+      + '（0 = 就在夹子处按弦），所以每个和弦按出来的是「自身根音往下数 ' + capo
+      + ' 个半音」那个型，实际发声仍是上面写的和弦名 —— 夹子的作用就是把整条进行'
+      + '挪到一个更好按的位置上。');
+  }
   $('vcTip').innerHTML = lines.join('<br>');
   $('vcCostNote').innerHTML = '整条进行的手位移动总量：<b style="color:var(--accent2)">'
     + res.schemes.map((s, i) => s.label + ' = ' + s.handSum.toFixed(1) + ' 品').join('　') + '</b>'
@@ -9505,13 +9587,26 @@ function vcRenderNow(){
   const cards = items.map((it, i) => {
     const v  = sc.voicings[i];
     const mp = i ? vcPair(sc.voicings[i - 1], v) : null;
-    /* 易按模式默认就把每题的备选摆出来 —— 这本来就是「和弦表」该有的样子 */
-    const alt = easyMode ? res.cands[i].slice(1, S.vcShowAll ? 8 : 4)
+    /* 易按模式默认就把每题的备选摆出来 —— 这本来就是「和弦表」该有的样子。
+       第 77 轮：方案带把位区（sc.bandObj）时，备选只列**同一区**里的按法 ——
+       这样这一栏回答的就是「这个和弦在这个把位上还有哪些按法」；
+       换区看别的按法请切上面的方案。 */
+    const pool = (easyMode && sc.bandObj)
+        ? res.cands[i].filter(c => c.lo >= sc.bandObj.lo && c.lo <= sc.bandObj.hi)
+        : res.cands[i];
+    const alt = easyMode ? pool.filter(c => c !== v).slice(0, S.vcShowAll ? 8 : 4)
                          : (S.vcShowAll ? res.cands[i].slice(0, 8) : []);
+    /* 这个和弦一共有哪些把位可选（按「最低按品」去重；上限 8 个，多的折成省略号）——
+       它就是「同一个和弦在不同把位下的不同配置」这份清单。 */
+    const possAll = [];
+    res.cands[i].forEach(c => { const k = c.fmin || 0; if (possAll.indexOf(k) < 0) possAll.push(k); });
+    possAll.sort((a, b) => a - b);
 
     return '<div class="vc-card' + (i ? '' : ' hi') + '">'
       + '<div class="vhead"><span class="vlab">' + it.label + '</span>'
       + '<span class="vdeg">' + it.deg + '</span>'
+      + (capo ? '<span class="vsnd">按 ' + nameOf((((it.root - capo) % 12) + 12) % 12, S.flats)
+          + ' 型</span>' : '')
       + '<span class="vsnd">' + v.midis.length + ' 声部'
         + (v.midis.length === 3 ? ' · shell' : '') + '</span>'
       + '<span class="vpos">' + ((v.fmin || 0) === (v.fmax || 0)
@@ -9526,9 +9621,15 @@ function vcRenderNow(){
       + (easyMode ? '<div class="vmv">易按成本 <b>' + (-v.score).toFixed(2) + '</b>　手指 '
           + v.fingers + ' 根　空弦 ' + v.notes.filter(x => x.f === 0).length
           + ' 根　跨度 ' + ((v.fmax || 0) - (v.fmin || 0)) + ' 品</div>' : '')
+      + (easyMode ? '<div class="vmv">可选把位：<b>'
+          + possAll.slice(0, 8).map(p => '第 ' + p + ' 品').join('　') + '</b>'
+          + (possAll.length > 8 ? ' …' : '') + '（共 ' + res.cands[i].length + ' 种按法）</div>' : '')
       + (alt.length ? '<div class="vc-alt">' + alt.map(a =>
-          '<span class="a" title="' + a.label + (easyMode ? '　易按成本 ' + (-a.score).toFixed(2) : '')
-          + '">' + vcFretCode(a) + (easyMode ? ' · ' + (-a.score).toFixed(1) : '') + '</span>').join('')
+          '<span class="a" title="' + a.label
+          + (easyMode ? '　第 ' + (a.fmin || 0) + '–' + (a.fmax || 0) + ' 品　易按成本 '
+              + (-a.score).toFixed(2) : '')
+          + '">' + (easyMode ? '第' + (a.fmin || 0) + '品 ' : '') + vcFretCode(a)
+          + (easyMode ? ' · ' + (-a.score).toFixed(1) : '') + '</span>').join('')
           + (easyMode ? '<span class="a" style="border:none;background:none;padding-left:2px">'
               + '← 备选按法（数字 = 易按成本，越小越省）</span>' : '') + '</div>' : '')
       + '</div>';
@@ -14083,6 +14184,11 @@ function bind(){
   /* CAGED */
   $('chordRoot').onchange = renderCaged;
   $('chordQual').onchange = renderCaged;
+  /* 变调夹与「和弦配置」共用一个字段：两页改哪边都同步（换页时会重填下拉） */
+  if ($('cagedCapo')) $('cagedCapo').onchange = e => {
+    const v = parseInt(e.target.value, 10);
+    S.vcCapo = (isFinite(v) && v >= 0 && v <= 9) ? v : 0; save(); renderCaged();
+  };
 
   /* 琶音探索 */
   $('arpRoot').onchange  = e => { S.root = parseInt(e.target.value, 10) || 0; $('rootSel').value = S.root; save(); renderArp(); };
@@ -14223,6 +14329,13 @@ function bind(){
   $('vcSpan').onchange = e => { S.vcSpan = parseInt(e.target.value, 10) || 9; S.vcScheme = 0; save(); vcRender(); };
   $('vcMode').onchange = e => {
     S.vcMode = (e.target.value === 'easy') ? 'easy' : 'lead';
+    S.vcScheme = 0; save(); vcRender();
+  };
+  /* ⚠ 这里**不能用 num()** —— 它定义在 sanitize() 那个 IIFE 内部，外面拿不到
+     （用了会在切换变调夹时抛 ReferenceError）。就地夹一次范围即可。 */
+  if ($('vcCapo')) $('vcCapo').onchange = e => {
+    const v = parseInt(e.target.value, 10);
+    S.vcCapo = (isFinite(v) && v >= 0 && v <= 9) ? v : 0;
     S.vcScheme = 0; save(); vcRender();
   };
   $('vcSchemes').addEventListener('click', e => {
