@@ -205,6 +205,20 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
 .eg .egn{font-size:10.5px; font-weight:600; color:var(--muted); margin-left:auto}
 .eg .egl{margin-top:5px; font-size:11px; color:var(--muted); line-height:1.55}
 .eg .egl b{color:var(--text2); font-weight:600}
+/* 简谱视奏（第 71 轮）：出题范围是「体系 → 子音阶」**两级**勾选 ——
+   体系那一级复用 .eg 卡片本身，子音阶那一级在卡片里排成自适应两列小行。
+   ⚠ 体系级的「半选」在 HTML 里设不了（没有 indeterminate 这个属性），
+     由 jdPanelSync() 在每次重绘后补上。 */
+.eg .jdsl{margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit,minmax(134px,1fr)); gap:1px 8px}
+.eg .jdsc{display:flex; align-items:center; gap:5px; padding:2px 5px; border-radius:6px;
+  font-size:11.5px; cursor:pointer; transition:.12s}
+.eg .jdsc:hover{background:var(--panel3)}
+.eg .jdsc.on{background:rgba(37,99,235,.10)}
+.eg .jdsc input{width:13px; height:13px; margin:0; flex:none; accent-color:var(--accent2)}
+.eg .jdsc .js-n{color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.eg .jdsc .js-d{margin-left:auto; font-size:10.5px; font-weight:700; color:var(--muted);
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.2px}
+.eg .jdsc.on .js-d{color:var(--accent2)}
 .legend{display:flex; flex-wrap:wrap; gap:5px}
 .legend span{
   display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--text2);
@@ -453,7 +467,7 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
    收紧成「只亮谱面上那一个位置」之后，若这个位置恰好落在当前指型之外，
    指板上就会一片空白 —— 所以显式把不透明度提回来。 */
 .note.playing .nc, .note.playing .nl{opacity:1 !important}
-/* ---------- 视奏练习（第 51 轮） ----------
+/* ---------- 五线谱视奏练习（第 51 轮） ----------
    点指板上任一音 → **同音高的位置全部高亮**。
    圆环的颜色由 JS 按音高类写成 --pkN（与点音反查同一套色），
    这里只负责那一圈光晕；描边粗细也在 JS 里写，避免两处各说各话。 */
@@ -1121,7 +1135,8 @@ body{padding-bottom:74px}
             <button class="game-btn" data-g="ear" data-page-node-id="glLsbLv5He7tFhiDFZmGEP"><b data-page-node-id="40iKKhIuMyQx1cxXtPCvul">听音辨名</b><small data-page-node-id="G4hn3elcY9P4qxcK0jjAyL">听音说出音名</small></button>
             <button class="game-btn" data-g="intv" data-page-node-id="TOh6DWBX0oF8i1lOhfGvvg"><b data-page-node-id="iXR0SOYy6I9CPrB5KsibJR">音程听辨</b><small data-page-node-id="DxEp3iSOJKa4xNbOGoOZKK">听两个音判断音程</small></button>
             <button class="game-btn" data-g="mode" data-page-node-id="9eZXYtAMmM5gdHKX1nvRx0"><b data-page-node-id="j3M6YStGw63EaHzft0fuG6">音阶听辨</b><small data-page-node-id="LHTzw60qHALpmAF4McQKCt">听一条音阶判断它是哪个调式</small></button>
-            <button class="game-btn" data-g="sight" data-page-node-id="SightGameBtn"><b data-page-node-id="SightGameBtnT">视奏练习</b><small data-page-node-id="SightGameBtnS">看五线谱在指板找音</small></button>
+            <button class="game-btn" data-g="sight" data-page-node-id="SightGameBtn"><b data-page-node-id="SightGameBtnT">五线谱视奏练习</b><small data-page-node-id="SightGameBtnS">看五线谱在指板找音</small></button>
+            <button class="game-btn" data-g="jsight" data-page-node-id="JdSightGameBtn"><b data-page-node-id="JdSightGameBtnT">简谱视奏练习</b><small data-page-node-id="JdSightGameBtnS">看简谱在指板找音</small></button>
           </div>
         </div>
 
@@ -1402,8 +1417,9 @@ body{padding-bottom:74px}
     <div class="card" data-page-node-id="VcCard1">
       <div class="card-t">
         <h3>和弦配置 · 一条进行里各和弦怎么按</h3>
-        <span class="hint">把整条进行当作一个整体，搜索「声部移动总量最小」的按法组合；给出几个不同的最优解。
-          6 / 7 弦吉他按 4~5 声部；4 / 5 弦贝斯按 3~5 声部（shell voicing 也一起枚举）</span>
+        <span class="hint">两种模式：<b>声部连接最优</b>把整条进行当作一个整体，搜索「声部移动总量最小」的按法组合，给出几个不同的最优解；
+          <b>最常见 / 最易按</b>逐和弦独立，按教材口径（空弦优先、低把位优先、弦组连成一片、手指更少）各挑各的按法。
+          6 / 7 弦吉他按 4~5 声部（易按模式把<b>上限</b>放到 6 声，好让教材上的六音开放型 / 横按型进池，下限两种模式一致）；4 / 5 弦贝斯按 3~5 声部</span>
       </div>
       <div class="row" style="max-width:1000px;margin-bottom:10px">
         <div class="field" style="margin:0">
@@ -1421,6 +1437,13 @@ body{padding-bottom:74px}
         <div class="field" style="margin:0">
           <label>品格上限</label>
           <select class="inp" id="vcSpan"></select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>按法模式</label>
+          <select class="inp" id="vcMode">
+            <option value="lead">声部连接最优</option>
+            <option value="easy">最常见 / 最易按</option>
+          </select>
         </div>
       </div>
       <div class="row" style="margin-bottom:10px">
@@ -3810,6 +3833,259 @@ function earGroupParent(gid){
   const g = GROUPS.find(x => x.id === gid);
   return (g && g.parentOf) ? scaleById(g.parentOf) : null;
 }
+
+/* ---------------- 简谱视奏：首调映射（第 71 轮 / 第 72 轮两套旋律小调） ----------------
+   用户口径（原话）：「各体系的子音阶以首调思维表达」——
+     自然大调以 1234567 为基，则自然小调为 6712345；
+     和声小调 671234#5；旋律小调 12b34567；和声大调 12345b67；双和声小调 671#234#5。
+   两条规则（写完拿 SCALES.iv 逐条自校验过 —— 第 71 轮五体系 35 条、
+   第 72 轮起六条体系实例 42 条，全对）：
+     1. **子音阶 = 母音阶基串循环左移**：第 m 型 = 基串从第 m 位起重排。
+     2. **「1」的基准 = 母音阶主音 − 基串首级数对应的半音数**：
+        自然大调 / 和声大调   → 1 = 自身主音（do）；
+        和声小调 / 双和声小调 → 1 = 关系大调主音（do）；
+        旋律小调（第 72 轮起）→ 两种都留：1 = la（自身主音，12b34567）
+                                与 1 = do（关系大调主音，67123#4#5），JD_SYS 里各占一行。
+   ⚠「1 = X」一律读作**「数字 1 记在 X 这个音上」**，不读作「X 是主音」——
+     同一个 A 旋律小调：1 = la 写成 12b34567（小调本位），1 = do 写成 67123#4#5
+     （大调本位，第 3 级记 b3）。两种读法差一个三度框架，都对，所以两套都留着。
+   ⚠⚠ 基串里的级数是「母音阶框架内的级数」，**不是**「本条音阶自己从 1 起数」——
+      这就是首调记谱里的「小调借关系大调的 do」。若改成 do 基准，
+      「自然小调 = 6712345」这条立刻不成立（会变成 1 2 b3 4 5 b6 b7）。
+   ⚠ 这几条体系在 GROUPS / SCALES 里**本来就存在**，本块只补「首调串」这一层，
+      不新建任何音阶数据。 */
+const JD_ACC  = { '-2':'bb', '-1':'b', '0':'', '1':'#', '2':'##' };
+const JD_DEGSEMI = { 1:0, 2:2, 3:4, 4:5, 5:7, 6:9, 7:11 };
+/* 六条**体系实例** + 各自的**母音阶基串**。每条 = [级数, 升降]，按演奏顺序（不是排序后的）。
+   ⚠ id 是**体系实例**的唯一键；gid 只是它引用的那个音阶组 —— 两者不是一回事。
+     旋律小调体系有**两套首调记谱法**（第 72 轮），同一个音阶组 mel 因此占两行：
+       · mel_la —— 1 = la，以音阶自己的主音为 1 …… 12b34567（第 71 轮用户指定的那套）
+       · mel_do —— 1 = do，以关系大调主音为 1 …… 67123#4#5
+     两套谱面差一个三度框架：「1 = la」一眼看出「上行还原 6 / 7 级」，
+     「1 = do」才看得出「大调降三级」的结构（第 3 级写 b3 而不是 1）—— 两套都留着。
+   ⚠ cn 是**面板标题**；GROUPS 里只有五个组名，不够用（mel 两行要分开叫）。 */
+const JD_SYS = [
+  { id:'major',  gid:'major',  cn:'自然大调体系',          base:[[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0]] },
+  { id:'harm',   gid:'harm',   cn:'和声小调体系',          base:[[6,0],[7,0],[1,0],[2,0],[3,0],[4,0],[5,1]] },
+  { id:'mel_la', gid:'mel',    cn:'旋律小调体系 · 1 = la', base:[[1,0],[2,0],[3,-1],[4,0],[5,0],[6,0],[7,0]] },
+  { id:'mel_do', gid:'mel',    cn:'旋律小调体系 · 1 = do', base:[[6,0],[7,0],[1,0],[2,0],[3,0],[4,1],[5,1]] },
+  { id:'harmaj', gid:'harmaj', cn:'和声大调体系',          base:[[1,0],[2,0],[3,0],[4,0],[5,0],[6,-1],[7,0]] },
+  { id:'dblmin', gid:'dblmin', cn:'双和声小调体系',        base:[[6,0],[7,0],[1,0],[2,1],[3,0],[4,0],[5,1]] }
+];
+/* 查体系实例：先按 id，查不到再按 gid 回落「该组的第一行」。
+   ⚠ 回落那一支是为了让 jdSysOf('mel') 这类**老调用**仍拿到 mel_la（第 71 轮的口径），
+     不是 mel_do —— 新代码一律传 id。 */
+function jdSysOf(id){ return JD_SYS.find(s => s.id === id) || JD_SYS.find(s => s.gid === id) || null; }
+/* 基串的一项 → 文本（'b3' / '#5' / '1'） */
+function jdLab(p){ return (JD_ACC[String(p[1])] || '') + p[0]; }
+/* 基串第 m 型的文本数组（循环左移 m 位）。
+   ⚠ 入参是**体系实例 id**（'mel_la' / 'mel_do'），不是音阶组 gid —— 传 gid 只会拿到第一行。 */
+function jdStrArr(sysId, m){
+  const s = jdSysOf(sysId); if (!s) return null;
+  const k = ((m % 7) + 7) % 7;
+  return s.base.slice(k).concat(s.base.slice(0, k)).map(jdLab);
+}
+/* 基串第 m 型的一行文本，例 '671234#5'（与用户给的写法同形：不带分隔符） */
+function jdStr(sysId, m){ const a = jdStrArr(sysId, m); return a ? a.join('') : ''; }
+/* 子音阶 = 母音阶的第几个调式（0 基）。用 iv 旋转反查 ——
+   ⚠ 不读 SCALES 的 deg / parent 字段：大调调式那批的 g 是归一化时才改写的，元数据不保证齐。 */
+function jdModeIndex(parentIv, childIv){
+  const key = childIv.slice().sort((a, b) => a - b).join(',');
+  for (let m = 0; m < parentIv.length; m++){
+    const rot = parentIv.map(iv => (((iv - parentIv[m]) % 12) + 12) % 12).sort((a, b) => a - b);
+    if (rot.join(',') === key) return m;
+  }
+  return -1;
+}
+/* 某条音阶在（某条体系实例里的）定位：体系 / 母音阶 / 调式序号 / 该型的首调串。
+   ⚠ 第二参 sysId 缺省时按音阶自己的组取 = 该组的**第一行**（mel → mel_la），
+     所以不传第二参的老调用行为逐字节不变。
+   ⚠ 不属于这六条体系的音阶（五声 / 对称 / 异域 / 琶音）一律返回 null。 */
+function jdInfo(sc, sysId){
+  if (!sc) return null;
+  const sys = jdSysOf(sysId || sc.g); if (!sys) return null;
+  if (sys.gid !== sc.g) return null;      /* 体系传错了（这条音阶不归它）宁可判无解 */
+  const g = GROUPS.find(x => x.id === sc.g);
+  const par = (g && g.parentOf) ? scaleById(g.parentOf) : null;
+  if (!par) return null;
+  const m = jdModeIndex(par.iv, sc.iv);
+  if (m < 0) return null;
+  const strs = jdStrArr(sys.id, m);
+  if (!strs || strs.length !== sc.iv.length) return null;
+  return { sys:sys, sysId:sys.id, gid:sys.gid, cn:sys.cn, parent:par, m:m, strs:strs };
+}
+/* 「1」的音高类。⚠ 本条音阶的主音坐在基串的**第 m 位**（m = 调式序号），
+   所以基准要用 base[m] 而不是 base[0] —— 用 base[0] 时子音阶会全体算错
+   （例：自然小调 A 会算出「1」= A，正确的应是「1」= C）。 */
+function jdFramePc(sc, rootPc, sysId){
+  const inf = jdInfo(sc, sysId); if (!inf) return null;
+  const p = inf.sys.base[inf.m];
+  return ((((rootPc - (JD_DEGSEMI[p[0]] + p[1])) % 12) + 12) % 12);
+}
+/* 「1」的绝对音高：音高类 = framePc、且 ≤ anchor 的那一个。
+   anchor 取本题音符的中位音高 —— 让绝大多数音不带高低音点（简谱的中音区）。 */
+function jdRef1(sc, rootPc, anchor, sysId){
+  const f = jdFramePc(sc, rootPc, sysId); if (f === null) return null;
+  return anchor - ((((anchor - f) % 12) + 12) % 12);
+}
+/* 某个音高在本条音阶里的简谱标注：{ txt:'#5', dot:-1..2, in:true }。
+   音阶外的音（窄范围兜底题会用到）回落成「以 1 为基准」的通用级数表 NUM。 */
+function jdNote(sc, rootPc, midi, ref1, sysId){
+  const inf = jdInfo(sc, sysId); if (!inf) return null;
+  const pc = (((midi % 12) + 12) % 12);
+  let idx = -1;
+  for (let i = 0; i < sc.iv.length; i++){
+    if ((((rootPc + sc.iv[i]) % 12) + 12) % 12 === pc){ idx = i; break; }
+  }
+  const dot = Math.floor((midi - ref1) / 12);
+  if (idx >= 0) return { txt:inf.strs[idx], dot:dot, in:true };
+  const f = jdFramePc(sc, rootPc, sysId);
+  return { txt:NUM[((pc - f) % 12 + 12) % 12], dot:dot, in:false };
+}
+/* 六条体系实例（按 JD_SYS 的次序）。
+   ⚠ 返回的就是 JD_SYS 的项本身（带 id / gid / cn）—— 面板要拿 id 与 cn 直接渲染，
+     不去 GROUPS 里查：mel 两行共用同一个组，查组名分不开它们。 */
+function jdSysGroups(){ return JD_SYS.slice(); }
+/* 某条体系实例下全部可选音阶（母音阶在前），恒 7 条。
+   ⚠ 入参是**体系实例 id**，不是音阶组 gid。 */
+function jdGroupScales(sysId){
+  const s = jdSysOf(sysId); if (!s) return [];
+  return earGroupList(s.gid).filter(x => !!jdInfo(x, s.id));
+}
+/* 组合键 = 体系实例 id + '|' + 音阶 id ——「(体系, 音阶)」在全表里唯一。
+   ⚠ mel 的两套记谱法共用同 7 条音阶，只有键不同才分得开；音阶 id 里不含 '|'。 */
+function jdKey(sysId, scId){ return sysId + '|' + scId; }
+function jdKeySys(k){ const i = String(k).indexOf('|'); return i < 0 ? null : String(k).slice(0, i); }
+function jdKeyScale(k){ const i = String(k).indexOf('|'); return i < 0 ? String(k) : String(k).slice(i + 1); }
+/* 全表（6 条体系 × 7 条 = 42 条），元素是**组合键** */
+function jdAllScaleIds(){
+  const o = [];
+  JD_SYS.forEach(s => jdGroupScales(s.id).forEach(x => o.push(jdKey(s.id, x.id))));
+  return o;
+}
+/* ---- 简谱谱面（第 71 轮）—— 与 stStaffSVG 完全独立：那支画五线谱，这支画简谱 ----
+   一条走句 → 数字 + 高/低音点 + 升降号 + 时值记号 + 小节线。
+   时值口径与五线谱视奏**同一套**（SIGHT_PAT / SIGHT_PATE 产出的 dur，单位 = 四分音符数）：
+     dur 0.5 → 数字下加一条下划线（八分）   dur 1   → 数字本身（四分）
+     dur 1.5 → 数字后加附点（附点四分）     dur 2   → 数字 + 一条增时线「−」（二分）
+     dur 4   → 数字 + 三条增时线（全音符）
+   休止符一律写 0，时值记号同上。
+   ⚠ 渲染层**不读全局常量**：调号拼写用升还是降由 o.flatPref 传；音阶 / 主音 / 锚点也全靠 o。
+   ⚠ 高低音点、升降号都画在数字列内，列宽 JD_COL 要装得下「#5̇」这种最宽的组合。 */
+const JD_COL = 34, JD_FS = 16, JD_BASE = 62;
+/* 表头文字宽度估算（font-size 12 的**保守**估法）：
+   ⚠ 渲染层是纯字符串函数，没有画布可测 —— 所以按「CJK 12.2px / 其余 6.6px」粗估。
+     宁可估宽：估宽了右端只是空一点；估窄了就会像第 71 轮截图那样，
+     长音阶名（「双和声小调 6 型（= 双和声大调的第 2 调式）」）向左压住左端调号。 */
+function jdTxtW(s){
+  let w = 0;
+  for (let i = 0; i < s.length; i++) w += (s.charCodeAt(i) >= 0x2e80 ? 12.2 : 6.6);
+  return w;
+}
+/* 按估算宽度裁到 maxW 以内并补省略号；一个字符都放不下时只留省略号 */
+function jdClip(s, maxW){
+  if (maxW <= 0) return '…';
+  if (jdTxtW(s) <= maxW) return s;
+  let out = '';
+  for (let i = 0; i < s.length; i++){
+    const ch = s.charAt(i);
+    if (jdTxtW(out + ch) + 12.2 > maxW) break;   /* 12.2 = 给省略号预留的一格 */
+    out += ch;
+  }
+  return (out || '') + '…';
+}
+function jdScoreSVG(items, o){
+  o = o || {};
+  const tt = (o.tt || 4);
+  const sc = o.sc || null;
+  const rootPc = (o.rootPc === undefined) ? 0 : o.rootPc;
+  const inf = sc ? jdInfo(sc, o.sysId) : null;
+  const ref1 = (o.ref1 === undefined || o.ref1 === null) ? 60 : o.ref1;
+  /* 摊成「一列 = 一拍」：音符自占一列，二分 / 全音符再按拍数补增时线列 */
+  const colList = [];
+  let beats = 0;
+  items.forEach((it, ii) => {
+    const d = it.dur || 1;
+    const nn = Math.floor(d + 1e-6);
+    /* ⚠ 附点只在「整数拍 ≥ 1 且余 0.5 拍」时成立：dur 0.5 是**八分音符**（下划线），
+       不是附点。少了 nn >= 1 这一半，八分音符会被画成「1·」并多出一个附点圆心。 */
+    const dotted = (nn >= 1 && (d - nn) > 0.4);
+    const lab = it.rest ? null : (it.jd || (inf ? jdNote(sc, rootPc, it.midi, ref1) : null));
+    const list = [{ note:true, it:it, dotted:dotted, under:(d < 1 ? 1 : 0), lab:lab }];
+    for (let k = 0; k < (nn >= 2 ? nn - 1 : 0); k++) list.push({ dash:true });
+    beats += d;
+    const isLast = (ii === items.length - 1);
+    list[list.length - 1].bar = !isLast && (Math.abs(beats / tt - Math.round(beats / tt)) < 1e-6);
+    list.forEach(c => colList.push(c));
+  });
+  const padL = 18, padR = 18;
+  /* 表头第一行 = 左「1 = X」+ 右「音阶名 · 首调串」，两段都必须完整可读；
+     所以版面宽取「列宽」与「表头所需宽」的较大者（只扩不缩，同 psScoreHTML 的思路）。
+     ⚠ JD_NAMIN 是留给音阶名的**下限**：没有它，短列宽（3 列 = 138px）配短主音时
+       「表头那一支」会赢，room 恰好算成 0 → 音阶名整段被换成光秃秃一个「…」。 */
+  const JD_NAMIN = 64;
+  const hd1 = inf ? ('1 = ' + nameOf(jdFramePc(sc, rootPc, o.sysId), !!o.flatPref)) : '';
+  const hdT = inf ? (' · ' + inf.strs.join('')) : '';
+  const W = Math.ceil(inf
+    ? Math.max(padL + colList.length * JD_COL + padR,
+               padL + jdTxtW(hd1) + 16 + JD_NAMIN + jdTxtW(hdT) + padR)
+    : padL + colList.length * JD_COL + padR);
+  const H = 104;
+  const P = [];
+  const t = (x, y, s, fs, col, wt, an) =>
+    '<text x="' + stN(x) + '" y="' + stN(y) + '" text-anchor="' + (an || 'middle')
+    + '" style="fill:' + (col || 'var(--text)') + ';font-family:inherit;font-size:' + fs
+    + 'px;font-weight:' + (wt || 400) + '">' + s + '</text>';
+  const dot = (cx, cy) => '<circle cx="' + stN(cx) + '" cy="' + stN(cy)
+    + '" r="1.7" style="fill:var(--text)"/>';
+  /* 左上角调号（简谱必备）；右上角「音阶名 · 首调串」——
+     首调串正是「这个体系 / 这条子音阶长什么样」的标注，**必须完整**；
+     音阶名长短差得极远，放不下就裁名补省略号（宁可裁名，不许压调号）。 */
+  if (inf){
+    /* room ≥ JD_NAMIN 由上面的 W 公式保证（表头那一支也带上了 JD_NAMIN）。 */
+    const room = (W - padL - padR) - jdTxtW(hd1) - 16 - jdTxtW(hdT);
+    P.push(t(padL, 19, hd1, 12, 'var(--muted)', 700, 'start'));
+    P.push(t(W - padR, 19, SX(jdClip(sc.cn, room) + hdT), 12, 'var(--muted)', 400, 'end'));
+  }
+  let x = padL;
+  colList.forEach(c => {
+    const cx = x + JD_COL / 2;
+    if (c.dash){
+      P.push('<line x1="' + stN(cx - 7) + '" y1="' + stN(JD_BASE - 5) + '" x2="' + stN(cx + 7)
+        + '" y2="' + stN(JD_BASE - 5) + '" style="stroke:var(--text);stroke-width:1.9"/>');
+    } else {
+      const lab = c.lab;
+      let s;
+      if (c.it.rest || !lab){
+        s = '0';
+      } else {
+        const m = /^(bb|##|b|#)?(\d)$/.exec(lab.txt);
+        s = m ? ((m[1] ? '<tspan style="font-size:' + (JD_FS - 4) + 'px">' + m[1] + '</tspan>' : '') + m[2])
+              : SX(lab.txt);
+      }
+      P.push(t(cx, JD_BASE, s, JD_FS, 'var(--text)', 700));
+      const dt = (lab && !c.it.rest) ? (lab.dot || 0) : 0;
+      for (let j = 0; j < dt; j++)  P.push(dot(cx, JD_BASE - 17 - 5 * j));
+      for (let j = 0; j < -dt; j++) P.push(dot(cx, JD_BASE + (c.under ? 20 : 15) + 5 * j));
+      if (c.under)
+        P.push('<line x1="' + stN(cx - 8) + '" y1="' + stN(JD_BASE + 9) + '" x2="' + stN(cx + 8)
+          + '" y2="' + stN(JD_BASE + 9) + '" style="stroke:var(--text);stroke-width:1.7"/>');
+      if (c.dotted) P.push(dot(cx + 11, JD_BASE - 4));
+      /* 音名标注（可选）：与五线谱视奏的「显示音名」并列的一项读谱辅助。
+         ⚠ 用的是**实发音名**（it.name 由出题侧按 midi 直接算），不是五线谱那套
+            「记谱音名（+12）」—— 简谱本来就没有谱表八度的概念。 */
+      if (o.names && c.it.name)
+        P.push(t(cx, JD_BASE + 34, SX(c.it.name), 9.5, 'var(--muted)', 400));
+    }
+    x += JD_COL;
+    if (c.bar)
+      P.push('<line x1="' + stN(x) + '" y1="36" x2="' + stN(x) + '" y2="92"'
+        + ' style="stroke:var(--border2);stroke-width:1.2"/>');
+  });
+  return '<svg class="staffsvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H
+    + '" style="width:' + Math.round(W * ST_ZOOM) + 'px;max-width:100%;height:auto;display:block"'
+    + ' xmlns="http://www.w3.org/2000/svg">' + P.join('') + '</svg>';
+}
 function chordFullName(sc, root){
   const nm = spellScale(sc, root);
   return nm[((root % 12) + 12) % 12] + sc.chordSym;
@@ -4191,6 +4467,7 @@ const S = {
   vcSpan: 12,           /* 和弦配置：搜索到第几品为止 */
   vcScheme: 0,          /* 和弦配置：当前查看的方案序号 */
   vcShowAll: false,     /* 和弦配置：是否展开全部备选指法 */
+  vcMode: 'lead',       /* 和弦配置：按法模式 —— lead = 声部连接最优 / easy = 最常见·最易按 */
   jamTrack: 1,          /* 玩点即兴：当前伴奏带编号 1..200 */
   jamScheme: 0,         /* 玩点即兴：当前查看的声部连接方案序号 */
   jamWin: 4,            /* 玩点即兴：把位窗口宽度（品） */
@@ -4280,11 +4557,12 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   S.vcSpan   = [7,10,12,15,19].indexOf(num(S.vcSpan, 12, 5, 24)) < 0 ? 12 : num(S.vcSpan, 12, 5, 24);
   S.vcScheme = num(S.vcScheme, 0, 0, 8);
   S.vcShowAll = !!S.vcShowAll;
+  S.vcMode   = (S.vcMode === 'easy') ? 'easy' : 'lead';
   /* 音阶听辨：勾选了哪些体系（该体系的母音阶 + 全部子音阶一起进题库） */
   if (!Array.isArray(S.modeGroups)) S.modeGroups = ['major'];
   S.modeGroups = S.modeGroups.filter(id => EAR_GROUPS.some(g => g.id === id));
   if (!S.modeGroups.length) S.modeGroups = ['major'];
-  /* 视奏练习：出题用的母音阶组 + 每题音符数 + 是否在谱下标注音名。
+  /* 五线谱视奏练习：出题用的母音阶组 + 每题音符数 + 是否在谱下标注音名。
      ⚠ 这里跑在常量 SIGHT_MIN/SIGHT_MAX/SIGHT_DEF 之前（它们在视听练习那一段），
         所以上下限只能写死字面量 —— 改那几个常量时这几行要一起改。 */
   if (!Array.isArray(S.sightGroups)) S.sightGroups = ['major'];
@@ -4300,6 +4578,27 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   /* 音阶填空：隐藏比例。以前是「不落盘、靠下拉第一项」，
      现在面板会因勾选而重绘，必须持久化 + 回填 selected，否则会被打回第一项。 */
   S.fillHide = [25, 40, 60].indexOf(S.fillHide) < 0 ? 40 : S.fillHide;
+  /* 简谱视奏练习（第 71 轮）：勾选表是**组合键表**（体系实例 id|音阶 id，唯一真值）。
+     ⚠ 第 72 轮起元素不是裸音阶 id 了 —— 旋律小调有两套记谱法（mel_la / mel_do），
+        同一条音阶在两个体系行里都得能单独勾。老存档里的裸 id 会被下面这一行滤掉，
+        于是自动回落到「六条体系全选」，不报错也不留半截状态。
+     ⚠ 与 sightGroups 不同，这里不按 EAR_GROUPS 过滤，而是按「属于这六条体系实例」过滤 ——
+        五声 / 对称 / 异域 / 琶音没有首调串可标，不进本题型。
+     ⚠ jdAllScaleIds / jdGroupScales 定义在本段**之前**（「视听练习」那一段），
+        所以这里可以直接用；SIGHT_MIN/MAX/DEF 在**之后**，上下限只能写字面量。 */
+  const JD_IDS = jdAllScaleIds();
+  if (!Array.isArray(S.jsSel)) S.jsSel = JD_IDS.slice();
+  S.jsSel = S.jsSel.filter(id => JD_IDS.indexOf(id) >= 0);
+  if (!S.jsSel.length) S.jsSel = JD_IDS.slice();
+  S.jdLen = num(S.jdLen, 5, 3, 12);
+  /* 读谱辅助「数字下标注音名」的默认值：**关**（第 73 轮改口径，原先默认开）。
+     ⚠ 第 71 轮那版写进去的 true 是**当时的默认值**、不是用户的选择 ——
+        所以老存档（有 jdNames 但没有迁移标记 jdNamesMig）一律回落关闭；
+        用户在本轮之后手动打开过才认（save 会把 jdNamesMig 一起写下）。
+     ⚠ 五线谱视奏的 S.sightNames 一直就是默认关，两条口径这下对齐。 */
+  if (_saved.jdNamesMig === undefined) S.jdNames = false;
+  S.jdNamesMig = true;
+  S.jdNames = !!S.jdNames;
   /* 「参考音」在面板上已经没有下拉了（第 57 轮改成「提示」按钮，见 G.round.hintOn）。
      老存档里残留的档位键直接清掉 —— 留着它，以后会被误当成「还有一项设置在生效」。 */
   if ('fillRef' in S) delete S.fillRef;
@@ -4686,8 +4985,11 @@ function buildBlocks(sc, ctx){
        实测：C 调下五窗依次是 2–6 / 4–8 / 7–11 / 9–13 / 12–16 品 ——
        把每根弦上窗内的音逐个解出来，与教材印的圆点逐个一致。
        【要害】窗只由主音位置决定，与音阶无关：同一主音下自然大调 / 和声小调 /
-       旋律小调的三组五窗完全重合，换音阶只是换掉窗里的音。所以对任何音阶都用同一套窗。 */
-    const wins = cagedScaleWindows(S.root, mid, N);
+       旋律小调的三组五窗完全重合，换音阶只是换掉窗里的音。所以对任何音阶都用同一套窗。
+       ⚠ 第 70 轮：`ctx.cagedAll`（只有「指板练习」传）会把**整条琴颈上五型的全部落位**
+         枚举出来（一个型在低把位与高把位各一份），供「练哪些位置」逐把位点选；
+         不传时仍是老口径的一组五窗，探索页的色块图与分屏逐字节不变。 */
+    const wins = cagedScaleWindows(S.root, mid, N, ctx.cagedAll);
     if (wins){
       wins.forEach((w, i) => {
         /* 本位区 = 本窗起点 … 下一窗起点前 1 品：五块互不重叠地铺满琴颈，色块照它画。
@@ -5079,8 +5381,11 @@ function blockCount(sc){
   const b = currentBlocks();
   return b ? b.list.length : 0;
 }
-/* 用当前状态重建一次色块，供图例与位置选择器使用（与指板渲染同参） */
-function currentBlocks(){
+/* 用当前状态重建一次色块，供图例与位置选择器使用（与指板渲染同参）。
+   o.cagedAll（可选，第 70 轮）：CAGED 时枚举整条琴颈上的**全部落位**（见
+   cagedScaleWindows 第 4 参）。只有「指板练习」的位置清单 / 合并块 / 页面渲染传它；
+   不传 = 老口径，探索页、和弦查询、分屏一律逐字节不变。 */
+function currentBlocks(o){
   const sc = scaleById(S.scale);
   const t = tuning(), mid = t.mid, N = mid.length;
   const showOpen = S.rangeStart === 0;
@@ -5088,7 +5393,8 @@ function currentBlocks(){
   const fEnd = S.rangeStart + S.rangeCount - 1;
   return buildBlocks(sc, {
     mid:mid, N:N, fStart:fStart, fEnd:fEnd,
-    set:scaleSet(sc.iv, S.root), group:stringGroup()
+    set:scaleSet(sc.iv, S.root), group:stringGroup(),
+    cagedAll:!!(o && o.cagedAll)
   });
 }
 
@@ -6463,15 +6769,44 @@ const CAGED_SCALE_FORMS = [
   { k:'D', cn:'D 型', s:4, rel: 7 },
   { k:'C', cn:'C 型', s:2, rel:10 }
 ];
-/* 当前定弦、以 root 为主音时的五个窗 { k, cn, lo, hi }（hi = lo + 4）。
+/* 当前定弦、以 root 为主音时的窗 { k, cn, lo, hi }（hi = lo + 4）。
    贝斯族返回 null —— 四根弦全是纯四度，没有吉他 G–B 那个大三度断点，
-   五型的锚弦与窗位都不一样，不能照搬。 */
-function cagedScaleWindows(root, mid, N){
+   五型的锚弦与窗位都不一样，不能照搬。
+   ------------------------------------------------------------
+   第 4 个参数 `all`（第 70 轮·指板练习）：不传 = 老口径，**只给一组五窗**
+   （A 型窗底那个八度，逐字节不变）；传真值 = **把整条琴颈上五型的全部落位都枚举出来**。
+   为什么要分两档：探索页的「CAGED 五型色块」是一张教学图，本来就该只印一遍；
+   而「练哪些位置」要能点到**每一个具体把位** —— 同一个型在低把位与高把位各有一份，
+   老口径只给得出其中一份（C 调只给 2–16 品，G 调只给 9–23 品，14–24 品整段点不到）。
+   五型的窗位是 `a + rel`，每升高（或降低）一个八度就整体 +12 / −12 品，
+   所以「全部落位」= `k ∈ {…, −12, 0, +12, …}` 每个八度各一组，再按窗底升序排
+   —— 排序不是装饰：`buildBlocks` 的「本位区 = 本窗起 … 下一窗起前 1 品」
+   靠这个次序才成立，五型就仍然不重叠地铺满琴颈。
+   判定「这一份可用」用**两条**（第 1 条是硬条件，第 2 条只是护栏）：
+     ① 这一型的**锚弦根音必须落在琴颈上** —— 窗 = [根音品 − 1, 根音品 + 3]，
+        所以根音品 = `lo + 1`，要求 `0 ≤ lo + 1 ≤ 24`。根音跑到琴颈外面去的那一份
+        不是「半截指型」，而是**根本按不出来**：以 root = ♭A 为例，A 型的低八度窗是
+        −2…2，可它的根音在 −1 品 —— 那不叫 A 型低把位，只是几根弦上的散音。
+        旧口径（`all` 不传）只看那一个八度，天然的根音品恒 ∈ [0, 11]，所以从没暴露过。
+     ② 窗在 0–24 品上的**可见部分 ≥ 3 品**（与 box 分支「只剩 1 品宽的窗口跳过」
+        同一条精神）。实测这条是 ① 的推论：能过 ① 的 lo ∈ [−1, 22]，
+        可见宽度最低也有 3 品（lo = 22 → 22–24），留着是防止哪天改了琴颈上界。 */
+function cagedScaleWindows(root, mid, N, all){
   if (isBassInst()) return null;
   const ai = N - 5;                                   /* A 型锚第 5 弦 → 数组下标 */
   if (ai < 0 || ai >= N) return null;
   const a = (((root - mid[ai]) % 12) + 12) % 12 - 1;  /* A 型窗起点（可到 −1：空弦位） */
-  return CAGED_SCALE_FORMS.map(f => ({ k:f.k, cn:f.cn, lo:a + f.rel, hi:a + f.rel + 4 }));
+  const ring = k => CAGED_SCALE_FORMS.map(f =>
+    ({ k:f.k, cn:f.cn, lo:a + f.rel + k, hi:a + f.rel + k + 4 }));
+  if (!all) return ring(0);
+  const out = [];
+  for (let k = -24; k <= 24; k += 12){
+    ring(k).forEach(w => {
+      const lo = Math.max(0, w.lo), hi = Math.min(24, w.hi);
+      if (hi - lo + 1 >= 3 && w.lo + 1 >= 0 && w.lo + 1 <= 24) out.push(w);
+    });
+  }
+  return out.sort((x, y) => x.lo - y.lo);
 }
 
 /* 全部和弦性质（不含 7alt）：有实测指型的用实测，没有的按大调骨架推导 */
@@ -8473,6 +8808,8 @@ function fillConnectControls(){
    和弦配置：一条进行里每个和弦「怎么按」
    ------------------------------------------------------------
    1) 给每个和弦枚举吉他上所有可弹、且把和弦色彩音弹全的按法（4~5 声部）；
+      第 72 轮加了第二条路（vcCands 第三参 easy）：不求「整条最优」，改按教材口径
+      逐和弦独立打分，等价于翻一本和弦表 —— 见 vcSolveEasy。
    2) 相邻两个按法之间的代价 = 最优声部配对之后的半音移动总量
       （声部数不齐时，多出来的声部记一个固定罚分）；
    3) 用 k-best 动态规划求整条进行代价最小的若干条路径 ——
@@ -8511,10 +8848,137 @@ function vcEssential(iv){
   return e;
 }
 
+/* ---------- 「最常见 / 最易按」模式：逐和弦独立的左手成本 ----------
+   教材口径（民谣 / 流行 / 爵士三套教材的公约数，不是把「声部连接」那套成本换个名字）。
+   第 5 版改成**分档**：档与档的量级拉开，等价于「教材当初挑和弦的那个顺序」——
+     ① 第一把位优先   —— 四个手指够得着的 1~4 品。有按品超过 4 品的按法每超 1 品罚
+                        VE_NOPEN。这一档最重，直接决定 C 是 x32010 而不是第 5 品的横按
+                        x35550、Dm 是 xx0231 而不是第 10 品的横按型；
+     ② 弦组不许挖空   —— 闷弦只允许出现在**低音侧**（C = x32010、Am = x02210、D = xx0232）。
+                        中间或高音区被挖掉的按法（F = 1x3xxx、G = 32000x）每根闷弦罚
+                        VE_BADMUTE，等于判死：教材和弦表上根本不写这种和弦；
+     ③ 手指数         —— 同一品的**相邻弦**算一根手指（横按 / 小横按）；中间只要隔着
+                        「按得更低或闷掉」的弦，这根手指就压不过去，必须另起一根；
+     ④ 手指不许被顶开 —— 同一品上的音被更低的音或空弦切成两段（F = 103211 的 1 品
+                        横按被空弦 A 顶开），每切一次罚 VE_SPLIT。教材形状都是「一片贴住」；
+     ⑤ 空弦最省       —— 不用按的弦直接省一根手指，开放和弦之所以是教材第一课；
+     ⑥ 低音落在最低那根弦 / 第二根弦（CAGED 里的 E 型 / A 型）是教材里出现频率最高的按法；
+     ⑦ 跨度 4 品以内、弦组连成一片、手位尽量低。
+
+   注意：这一模式**不做任何跨和弦配对** —— 就是翻和弦表，每个和弦各挑各的。
+   所以它给出的按法之间手要来回跑，跟模式一「整条进行总移动最小」是两件不同的事。 */
+const VE_PERWIN  = 10;    /* 易按模式每个把位窗口留几个候选（比模式一多留两个） */
+const VE_NOPEN   = 3.00;  /* ① 按品超过 4 品后，每高 1 品。给得比一根手指（1.15）重得多 */
+const VE_BADMUTE = 6.00;  /* ② 低音侧之外的每根闷弦 —— 相当于判死 */
+const VE_FINGER  = 1.15;  /* ③ 每根手指（同一品的相邻弦算一根，见 vcFingerCount） */
+const VE_SPLIT   = 1.30;  /* ④ 同一品被「更低的音或空弦」顶开的次数 */
+const VE_OPEN    = 0.30;  /* ⑤ 每根空弦的奖励 */
+const VE_BASS6   = 0.85;  /* ⑥ 低音落在最低那根弦的奖励（CAGED E 型） */
+const VE_BASS5   = 0.55;  /* ⑥ 低音落在第二根弦的奖励（CAGED A 型） */
+const VE_SPAN    = 0.42;  /* ⑦ 超过 4 品跨度后每品罚分 */
+const VE_POS     = 0.06;  /* ⑦ 手位中心每高 1 品的罚分 */
+const VE_GAP     = 2.80;  /* ⑦ 弦组里每跳空 1 根弦。「闷掉中间那根弦」不是省力，而是要
+                             刻意躲开它 —— 教材和弦表里几乎不出现这种写法
+                             （G 是 320003 而不是 3x000x）。 */
+const VE_MUTE    = 0.90;  /* 低音侧的前缀闷弦，按 (前缀长度 / (弦数-1)) 加权。
+                             闷最低那根弦是常规写法（C = x32010、D = xx0232），
+                             只轻轻计一笔，不当作缺点。 */
+
+/* 左手计量：手指数 / 横按 / 空弦数 / 跳弦数 / 闷弦 / 品范围 / 最低发声音。
+   ⚠ 手指数不能数「不同的按品」—— 那是错的口径：
+     320003（G）的 3 品落在 1 弦和 6 弦上，中间是 2 品和空弦，一根手指压不过去，
+     实际要用 3 根手指；而 133211（F 横按）的 1 品落在 1 / 5 / 6 弦上，中间几根
+     按得更高，食指一根横按就够 —— 两者按品数都是 3 和 3，物理上却不是一回事。
+   规则：同一个品上的**相邻弦**算一根手指；中间只要隔着一根「按得更低或闷掉」的弦，
+        那根手指就压不过去，必须另起一根（按得更高的弦不算阻隔，手指压得住它下面）。
+   横按：某一品上有一根手指真的按住了 ≥2 根弦。
+   splits：同一品上的音被**更低的音或空弦**切成了 ≥2 段 —— 一根手指压不过去，
+           必须拆成两根（F = 103211 的 1 品横按被空弦 A 顶开）。 */
+function vcFingerCount(pick, n){
+  const used = [];
+  let open = 0;
+  for (let i = 0; i < n; i++){
+    const f = pick[i];
+    if (f === null) continue;
+    used.push(i);
+    if (f === 0) open++;
+  }
+  /* 闷弦分两类（第 5 版）：
+     muteLow = 从最低弦起**连续**闷掉的根数 —— 教材常规写法（x32010 / xx0232），轻罚一笔；
+     muteBad = 其余闷弦 —— 弦组被从中间或高音侧挖空（F = 1x3xxx、G = 32000x），重罚。 */
+  let muteLow = 0, muted = 0;
+  while (muteLow < n && pick[muteLow] === null) muteLow++;
+  for (let i = 0; i < n; i++) if (pick[i] === null) muted++;
+  const muteBad = muted - muteLow;
+  let gaps = 0;
+  for (let i = 1; i < used.length; i++)
+    if (used[i] - used[i - 1] > 1) gaps += used[i] - used[i - 1] - 1;
+  const byFret = {};
+  for (let i = 0; i < n; i++){
+    const f = pick[i];
+    if (f === null || f === 0) continue;
+    (byFret[f] = byFret[f] || []).push(i);
+  }
+  let fingers = 0, barre = 0, splits = 0;
+  Object.keys(byFret).forEach(k => {
+    const f = +k, ss = byFret[k];
+    let runs = 1;
+    for (let i = 1; i < ss.length; i++){
+      let blocked = false;
+      for (let s = ss[i - 1] + 1; s < ss[i]; s++){
+        const g = pick[s];
+        if (g === null || g < f){ blocked = true; break; }
+      }
+      if (blocked) runs++;
+    }
+    fingers += runs;
+    splits += runs - 1;                    /* 被顶开的次数 —— 另起一根手指之外再罚一笔 */
+    if (ss.length >= 2 && runs === 1) barre = 1;
+  });
+  const fl = used.filter(i => pick[i] > 0).map(i => pick[i]);
+  return { fingers:fingers, barre:barre, open:open, gaps:gaps,
+           muteLow:muteLow, muted:muted, muteBad:muteBad, splits:splits,
+           bass:used.length ? used[0] : 0,
+           fmin:fl.length ? Math.min.apply(null, fl) : 0,
+           fmax:fl.length ? Math.max.apply(null, fl) : 0 };
+}
+
+/* 一个已量好左手计量的按法的「易按成本」（越小越好）。
+   横按不单列成本 —— 它在手指计数里已经按「一根手指按住相邻多弦」记过一次了；
+   真正要另罚的是「手指被顶开」（见 vcFingerCount 的 splits）。 */
+function vcEasyCostOf(m, n){
+  return VE_NOPEN  * Math.max(0, m.fmax - 4)
+       + VE_BADMUTE* m.muteBad
+       + VE_FINGER * m.fingers
+       + VE_SPLIT  * m.splits
+       + VE_SPAN   * Math.max(0, (m.fmax - m.fmin) - 4)
+       + VE_POS    * ((m.fmin + m.fmax) / 2)
+       + VE_GAP    * m.gaps
+       + VE_MUTE   * (m.muteLow / Math.max(1, n - 1))
+       - VE_OPEN   * m.open
+       - (m.bass === 0 ? VE_BASS6 : (m.bass === 1 ? VE_BASS5 : 0));
+}
+
+/* 方便单测的包装：pick = 每根弦的品位（null 表示不弹），n = 弦数。 */
+function vcEasyCost(pick, n){ return vcEasyCostOf(vcFingerCount(pick, n), n); }
+
+/* 易按排序：先比成本；**同成本时声部多的优先**。
+   这一条不并进成本里，只用来打破平局：成本完全相同的两个按法里，把弦按满的那个
+   更接近教材形状（枚举顺序里同一弦的「闷」排在各个品之前，不写这一条会让闷掉
+   的那一个胜出）。 */
+function vcEasyCmp(a, b){
+  return (b.score - a.score) || (b.notes.length - a.notes.length);
+}
+
 /* 枚举一个和弦的候选按法。
    约束：4~5 个发声音；必备色彩音齐全；最低音 = 根音（转位和弦则 = 指定低音）；
-        按弦只用到不超过 4 个不同品位的按指；全部落在 [lo, lo+win] 窗口内。 */
-function vcCands(it, mid){
+        按弦只用到不超过 4 个不同品位的按指；全部落在 [lo, lo+win] 窗口内。
+   第三参 easy（第 72 轮新增）：走「最常见 / 最易按」打分，并把声部**上限**在吉他上放开到 6
+       （教材和弦表上的开放型 / 横按型 —— G = 320003、F = 133211 —— 都是六音，卡在 5 会让
+       这两条根本进不了候选池）。⚠ 声部**下限**两种模式一致（吉他 4 / 贝斯 3）：
+       第四版曾让易按模式把吉他放开到 3 声部，结果「2 根手指的 3 音薄按法」把教材形状全挤下去。
+   **不传时逐字节沿用老口径** —— 声部连接那套算法完全不受影响。 */
+function vcCands(it, mid, easy){
   const iv   = it.q.iv;
   const root = it.root;
   const pcs  = iv.map(i => (((root + i) % 12) + 12) % 12);
@@ -8525,9 +8989,12 @@ function vcCands(it, mid){
   const allowed = foreignBass ? pcs.concat([bassPc]) : pcs;
   const ess  = vcEssential(iv).map(i => (((root + i) % 12) + 12) % 12);
   const n    = mid.length;                       /* 7 弦吉他也要能用低 B 当低音 */
-  /* 吉他按 4~5 声部（和弦色彩要全）；贝斯只有 4~5 根弦，而且实际演奏里
-     shell voicing（R-3-7、R-5-7）比四音全按更常用，所以下限放到 3 声部。 */
-  const minSnd = n >= 6 ? 4 : 3;
+  /* 吉他按 4~5 声部（和弦色彩要全 —— 教材和弦表上就没有 3 个音的开放和弦）；
+     贝斯只有 4~5 根弦，而且实际演奏里 shell voicing（R-3-7、R-5-7）比四音全按
+     更常用，所以贝斯的下限放到 3 声部。
+     **两种模式同一个下限**：第 72 轮第四版曾经让易按模式把吉他放开到 3 声部，
+     结果「2 根手指的 3 音薄按法」（F = 103xxx、C = x320xx）把教材形状全挤了下去。 */
+  const minSnd = (n >= 6 ? 4 : 3);
   const win  = S.vcWin, fretsMax = Math.min(24, S.vcSpan);
   const out  = [];
 
@@ -8550,7 +9017,12 @@ function vcCands(it, mid){
     const winCands = [];
     const probe = { n: 0 };
     const rec = (s, nSound, fretSet) => {
-      if (winCands.length > 220) return;               /* 保险丝 */
+      /* 保险丝：老口径一个窗口留 8 个候选，220 绰绰有余；易按模式把声部上限放到 6 之后
+         合法叶子多了一个量级（六弦一个 5 品窗就有 400+ 组合），220 会在**枚举到一半**
+         时熔断 —— 于是「晚一点才轮到」的那些组合（320003、133211 都排在很后面）
+         根本没进候选池，排在前面的是把最外侧那根弦闷掉的写法。
+         所以易按模式单列一档，给到 3000（六弦 3^k 上限约 2200，七弦也够）。 */
+      if (winCands.length > (easy ? 3000 : 220)) return;
       if (probe.n++ > 340000) return;                  /* 7 弦时枚举面变大，防病态窗口卡死 */
       const remain = n - s;
       if (nSound + remain < minSnd) return;            /* 凑不满最低声部数 */
@@ -8567,7 +9039,11 @@ function vcCands(it, mid){
           sound.push(pc);
           if (f > 0) fretted.push(f);
         }
-        if (notes.length < minSnd || notes.length > 5) return;
+        /* 声部数上限：老口径 5（「吉他按 4~5 声部」那条设计）；
+           易按模式放到「不超过弦数、且不超过 6」—— 教材上最常见的按法本来就是
+           把六根弦按满的开放型 / 横按型（G = 320003 六音、F = 133211 六音），
+           卡在 5 会让这两条**根本进不了候选池**。 */
+        if (notes.length < minSnd || notes.length > (easy ? Math.min(n, 6) : 5)) return;
         if (new Set(fretted).size > 4) return;         /* 超过 4 根手指（不算横按） */
         for (const e of ess) if (sound.indexOf(e) < 0) return;
         notes.sort((a, b) => a.midi - b.midi);
@@ -8575,13 +9051,18 @@ function vcCands(it, mid){
         if (foreignBass && notes[0].pc === bassPc) notes[0].lab = 'B';   /* 非和弦低音单独标 B */
         const fmin = fretted.length ? Math.min.apply(null, fretted) : 0;
         const fmax = fretted.length ? Math.max.apply(null, fretted) : 0;
-        /* 可弹性打分：按指越少越好、越低把位越好、音域越集中越好 */
-        const score = -(new Set(fretted).size) * 1.1 - (fmax - fmin) * 0.35 - fmax * 0.06
-                    + (notes.length === 4 ? 0.4 : 0);
+        /* 可弹性打分：按指越少越好、越低把位越好、音域越集中越好。
+           易按模式改吃 vcEasyCost —— 第一把位、弦组不许挖空、手指不许被顶开、
+           空弦奖励、低音弦偏好；而且**逐和弦独立**用（见 vcSolveEasy），
+           不做任何跨和弦配对。 */
+        const fm = vcFingerCount(pick, n);       /* 左手计量：手指 / 横按 / 空弦 / 跳弦 … */
+        const score = easy ? -vcEasyCostOf(fm, n)
+                    : -(new Set(fretted).size) * 1.1 - (fmax - fmin) * 0.35 - fmax * 0.06
+                      + (notes.length === 4 ? 0.4 : 0);
         winCands.push({ notes:notes, midis:notes.map(x => x.midi), frets:pick.slice(),
                         muted:pick.map(x => x === null), lo:lo, fmin:fmin, fmax:fmax,
                         hand:(fmin + fmax) / 2,
-                        fingers:new Set(fretted).size, score:score,
+                        fingers: easy ? fm.fingers : new Set(fretted).size, score:score,
                         label:notes.map(x => noteName(x.pc)).join(' ') });
         return;
       }
@@ -8596,17 +9077,20 @@ function vcCands(it, mid){
     rec(0, 0, []);
     /* 同一窗口内的重复指法去重 + 按可弹性排序，只留 VC_PERWIN 个 */
     const seen = {};
-    winCands.sort((a, b) => b.score - a.score);
+    winCands.sort(easy ? vcEasyCmp : ((a, b) => b.score - a.score));
     const keep = [];
     for (const c of winCands){
       const key = c.frets.join(',');
       if (seen[key]) continue;
       seen[key] = 1;
       keep.push(c);
-      if (keep.length >= VC_PERWIN) break;
+      if (keep.length >= (easy ? VE_PERWIN : VC_PERWIN)) break;
     }
     for (const c of keep) out.push(c);
   }
+  /* 易按模式要把各窗口的候选**放在一起**再排一次 —— 每个窗口只留 8 / 10 个，
+     不跨窗口比一遍，最省手指的那个可能根本排不到前面。 */
+  if (easy) out.sort(vcEasyCmp);
   return out;
 }
 
@@ -8762,8 +9246,34 @@ function vcDP(cands){
   prev.forEach(l => l.forEach(s => { if (!best || s.cost < best.cost) best = s; }));
   return best;
 }
-/* 求解整条进行：全局最优 + 低 / 中 / 高把位各一个解 */
-function vcSolve(items, mid){
+/* 模式二「最常见 / 最易按」：**逐和弦独立**，不做任何跨和弦配对 ——
+   相当于翻一本和弦表，每个和弦各挑各的。所以它不保证整条进行好弹，
+   只保证每个和弦自己好按；两条路是两种不同的目标，不是同一个算法的两档。
+   输出结构与模式一保持一致，外加上 mode 与每题易按成本，渲染层不必分两套。 */
+function vcSolveEasy(items, mid){
+  const cands = items.map(it => vcCands(it, mid, true));
+  for (let i = 0; i < cands.length; i++)
+    if (!cands[i].length) return { cands:cands, schemes:[], mode:'easy',
+                                   failAt:i, failName:items[i].label, failDeg:items[i].deg };
+  /* cands[i] 已按易按成本**升序**排好，[0] 就是「和弦表上那一个」；
+     候选对象上的 score 在易按模式下 = -vcEasyCost，取负就是成本。 */
+  const vs = cands.map(cs => cs[0]);
+  let hs = 0, sm = 0, fg = 0;
+  for (let i = 1; i < vs.length; i++){
+    const mp = vcPair(vs[i - 1], vs[i]);
+    hs += mp.hand; sm += mp.semi; fg += mp.finger;
+  }
+  const easyCost = vs.map(v => -v.score);
+  return { cands:cands, mode:'easy', failAt:-1, schemes:[
+    { label:'常用按法', band:'easy', easy:true, cost:easyCost.reduce((a, b) => a + b, 0),
+      easyCost:easyCost, avgPos:vcAvgPos(vs), handSum:hs, semiSum:sm, fingerSum:fg,
+      voicings:vs } ] };
+}
+
+/* 求解整条进行：全局最优 + 低 / 中 / 高把位各一个解。
+   第三参 mode 传 'easy' 时走模式二；**不传 = 老口径**（玩点即兴那条路径照旧）。 */
+function vcSolve(items, mid, mode){
+  if (mode === 'easy') return vcSolveEasy(items, mid);
   const cands = items.map(it => vcCands(it, mid));
   for (let i = 0; i < cands.length; i++)
     if (!cands[i].length) return { cands:cands, schemes:[], failAt:i, failName:items[i].label, failDeg:items[i].deg };
@@ -8885,6 +9395,7 @@ function vcFillControls(){
   $('vcSpan').innerHTML = [[7,'7 品'],[10,'10 品'],[12,'12 品'],[15,'15 品'],[19,'19 品']]
     .map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
   $('vcSpan').value = S.vcSpan;
+  if ($('vcMode')) $('vcMode').value = (S.vcMode === 'easy') ? 'easy' : 'lead';
 }
 
 let vcJob = 0;
@@ -8914,7 +9425,8 @@ function vcRenderNow(){
   }
   const items = progItems();
   const t0 = Date.now();
-  const res = vcSolve(items, mid);
+  const res = vcSolve(items, mid, S.vcMode === 'easy' ? 'easy' : 'lead');
+  const easyMode = res.mode === 'easy';
   const ms  = Date.now() - t0;
   if (!res.schemes.length){
     $('vcSchemes').innerHTML = '';
@@ -8938,6 +9450,24 @@ function vcRenderNow(){
     + '<span class="badge">' + items.length + ' 个和弦</span>');
   lines.push('级数　<b>' + (bk ? p.deg : items.map(x => x.deg).join(' | ')) + '</b>'
     + (bk && p.orig ? '<br>原书　' + p.orig : ''));
+  if (easyMode){
+    lines.push('算法（最常见 / 最易按）：<b>逐和弦独立</b> —— 不做任何跨和弦配对，'
+      + '每个和弦各挑各的，等价于翻一本和弦表。成本按教材口径<b>分档</b>算，重的档在前：'
+      + '<b>① 第一把位优先</b>（1~4 品四个手指够得着；按品超过 4 品的每高 1 品重罚 —— '
+      + '所以 C 是 x32010 而不是第 5 品的横按 x35550、Dm 是 xx0231 而不是第 10 品的高把位型）、'
+      + '<b>② 弦组不许挖空</b>（闷弦只允许出现在低音侧 —— x32010 / xx0232 是常规写法，'
+      + '中间或高音区被挖掉的形状教材和弦表上根本不写）、'
+      + '<b>③ 以「品」为单位数手指</b>（同一品的相邻弦算一根，横按不额外罚分 —— '
+      + '它已经算过一根手指了）、'
+      + '<b>④ 手指不许被顶开</b>（同一品被更低的音或空弦切成两段就扣分，教材形状都是「一片贴住」）、'
+      + '<b>⑤ 空弦奖励</b>（不用按的弦直接省一根手指，开放和弦之所以是教材第一课就是这个原因）、'
+      + '<b>⑥ 低音落在最低那根弦 / 第二根弦</b>（CAGED 里的 E 型 / A 型）额外加分、'
+      + '<b>⑦ 跨度 4 品以内、弦组连成一片</b>（跳空一根就扣分）、手位尽量低。'
+      + '声部下限与「声部连接最优」一致（吉他 4 声部起、贝斯 3 声部起），上限放开到按满整把琴 —— '
+      + '教材上的开放型 / 横按型（G = 320003、F = 133211）本来就是六音，「好按」不靠少按几个音来换。'
+      + '注意：它只保证每个和弦自己好按，不保证整条好弹 —— 各按法之间手要来回跑，'
+      + '这是它跟「声部连接最优」的核心差别。下面照样给出「手挪 ∑」，方便对照两种模式。');
+  } else {
   lines.push('算法：每个和弦枚举所有可弹按法 → 相邻和弦按<b>最优声部配对</b>算代价 → '
     + 'k-best 动态规划取全局最小；其余方案是把整条进行限定在低 / 中 / 高把位区各自求最优，'
     + '所以每个方案的手型区域真的不同。'
@@ -8948,14 +9478,19 @@ function vcRenderNow(){
     + '后者不能省，否则会挑出「每根手指都只挪一点、整只手却左右横跳」的按法。'
     + '空弦单独优待：两根都是空弦时这一声部不花力气，但整套按法的把位必须整条一致。'
     + '「手挪 ∑」整条进行手位一共挪了多少品、「均」该方案所有按法的平均把位，都是越小越省力。');
+  }
   $('vcTip').innerHTML = lines.join('<br>');
   $('vcCostNote').innerHTML = '整条进行的手位移动总量：<b style="color:var(--accent2)">'
     + res.schemes.map((s, i) => s.label + ' = ' + s.handSum.toFixed(1) + ' 品').join('　') + '</b>'
-    + '（数值越小，换和弦时手移动越少）'
-    + (res.schemes.length === 1
-        ? '<br><span class="hint">这条进行在低 / 中 / 高把位区里只能找到同一处手型，'
-          + '所以只有一个方案 —— 想看到别的区域，把「把位窗口」调宽或提高「品格上限」。</span>'
-        : '');
+    + (easyMode
+        ? '（各和弦易按成本合计 ' + res.schemes[0].cost.toFixed(1) + '）'
+          + '<br><span class="hint">逐和弦独立选出来的按法当然不必彼此靠近，所以这里的「手挪 ∑」'
+          + '通常明显大于「声部连接最优」—— 想让它小，把「按法模式」切回声部连接最优。</span>'
+        : '（数值越小，换和弦时手移动越少）'
+          + (res.schemes.length === 1
+              ? '<br><span class="hint">这条进行在低 / 中 / 高把位区里只能找到同一处手型，'
+                + '所以只有一个方案 —— 想看到别的区域，把「把位窗口」调宽或提高「品格上限」。</span>'
+              : ''));
 
   if (S.vcScheme >= res.schemes.length) S.vcScheme = 0;
   $('vcSchemes').innerHTML = '<span class="liblab">方案</span>'
@@ -8963,13 +9498,17 @@ function vcRenderNow(){
         (i + 1) + '. ' + s.label + '（均 ' + s.avgPos.toFixed(1) + ' 品 · 手挪 ∑ ' + s.handSum.toFixed(1) + ' 品）',
         S.vcScheme === i,
         '整条进行：手位一共挪 ' + s.handSum.toFixed(1) + ' 品；各声部音高合计移动 '
-        + s.semiSum.toFixed(1) + ' 半音；按品平均位置 ' + s.avgPos.toFixed(1) + ' 品（DP 综合代价 ' + s.cost.toFixed(1) + '）')).join('');
+        + s.semiSum.toFixed(1) + ' 半音；按品平均位置 ' + s.avgPos.toFixed(1) + ' 品（'
+        + (easyMode ? '各和弦易按成本合计 ' : 'DP 综合代价 ') + s.cost.toFixed(1) + '）')).join('');
 
   const sc = res.schemes[S.vcScheme];
   const cards = items.map((it, i) => {
     const v  = sc.voicings[i];
     const mp = i ? vcPair(sc.voicings[i - 1], v) : null;
-    const alt = S.vcShowAll ? res.cands[i].slice(0, 8) : [];
+    /* 易按模式默认就把每题的备选摆出来 —— 这本来就是「和弦表」该有的样子 */
+    const alt = easyMode ? res.cands[i].slice(1, S.vcShowAll ? 8 : 4)
+                         : (S.vcShowAll ? res.cands[i].slice(0, 8) : []);
+
     return '<div class="vc-card' + (i ? '' : ' hi') + '">'
       + '<div class="vhead"><span class="vlab">' + it.label + '</span>'
       + '<span class="vdeg">' + it.deg + '</span>'
@@ -8984,8 +9523,14 @@ function vcRenderNow(){
       + (mp ? '<div class="vmv">← 手挪 <b>' + mp.hand.toFixed(1) + '</b> 品 · 声部 ' + mp.semi.toFixed(1) + ' 半音'
           + (mp.extra.length ? '（' + mp.extra.length + ' 声部新增）' : '') + '</div>'
         : '<div class="vmv"><span class="zero">起点和弦</span></div>')
+      + (easyMode ? '<div class="vmv">易按成本 <b>' + (-v.score).toFixed(2) + '</b>　手指 '
+          + v.fingers + ' 根　空弦 ' + v.notes.filter(x => x.f === 0).length
+          + ' 根　跨度 ' + ((v.fmax || 0) - (v.fmin || 0)) + ' 品</div>' : '')
       + (alt.length ? '<div class="vc-alt">' + alt.map(a =>
-          '<span class="a" title="' + a.label + '">' + vcFretCode(a) + '</span>').join('') + '</div>' : '')
+          '<span class="a" title="' + a.label + (easyMode ? '　易按成本 ' + (-a.score).toFixed(2) : '')
+          + '">' + vcFretCode(a) + (easyMode ? ' · ' + (-a.score).toFixed(1) : '') + '</span>').join('')
+          + (easyMode ? '<span class="a" style="border:none;background:none;padding-left:2px">'
+              + '← 备选按法（数字 = 易按成本，越小越省）</span>' : '') + '</div>' : '')
       + '</div>';
   }).join('');
   $('vcBody').innerHTML = '<div class="vc-row">' + cards + '</div>'
@@ -9102,10 +9647,11 @@ const GAME_HELP = {
   ear:'随机弹响一个音，从下方按钮中选出它的音名。\n如果觉得太难，可以把顶栏定弦调成标准，并先在「指板探索」里把 12 个音名背熟。',
   intv:'先弹一个根音，再弹一个音，你要判断两者之间的音程。\n建议：先听它是「近」还是「远」，再听色彩（大/小、纯/减）。',
   mode:'弹一条音阶，从选项里挑出它是哪个调式。\n左侧「听辨范围」按<b>母音阶体系</b>分组 —— 勾上哪一组，就把该体系的母音阶和它的全部子音阶（各个调式）一起放进题库。可以多选，也可以只勾一组死磕。\n重点听<b>特征音</b>：多利亚的大六度、弗里吉亚的 b2、利底亚的 #4、混合利底亚的 b7；和声 / 旋律小调体系还要留意 b6 与还原的 7 级。',
-  sight:sightHelp          /* 视奏的帮助文本要按当前定弦换谱表口径，所以是函数 */
+  sight:sightHelp,         /* 视奏的帮助文本要按当前定弦换谱表口径，所以是函数 */
+  jsight:jsightHelp        /* 简谱视奏：讲清「1 落在哪」与两级勾选 */
 };
 
-/* 视奏练习的帮助文本：谱表跟定弦自动走，所以文案分两套。
+/* 五线谱视奏练习的帮助文本：谱表跟定弦自动走，所以文案分两套。
    共同的部分（卡八度判定、试听 / 显示音名、每题音符数）写在两套里字面一致。 */
 function sightHelp(){
   const bass = isBassInst();
@@ -9123,6 +9669,27 @@ function sightHelp(){
     + '或者打开「☐ 显示音名」把音名标在谱下。\n'
     + tail + '「每题音符数」在左侧自己定。';
 }
+/* 简谱视奏练习的帮助文本（第 71 轮）。
+   与五线谱版并列，但三件事不同：①谱面是首调数字、不画谱表；②「1」的基准随体系变；
+   ③只有六条母音阶体系实例可选（五声 / 对称 / 异域 / 琶音没有首调串可标，不进本题型）。 */
+function jsightHelp(){
+  return '按左侧勾选的<b>子音阶</b>随机出一条<b>简谱视奏</b>题 —— 题目画在指板下方的'
+    + '<b>数字简谱</b>上，节奏与「五线谱视奏练习」<b>同一套</b>'
+    + '（八分下划线、附点、二分 / 全音符的增时线，句尾有休止符收住）。\n'
+    + '在指板上<b>按简谱顺序</b>把每个音点出来：点一下，<b>同音高的位置会全部亮起来</b>，'
+    + '顺便看清这个音在琴颈上的所有落点。\n'
+    + '判定<b>卡八度</b> —— 简谱写的是哪个音高就点出那个音高；同一个音高换个把位算对，'
+    + '点成别的八度算错。\n'
+    + '全部点完按「提交答案」；点错了按「撤回上一步」。卡住了可以「▶ 试听题目」，'
+    + '或者打开「☐ 显示音名」把音名标在数字下。\n'
+    + '<b>简谱的「1」落在哪个音上，随体系变</b>：自然大调、和声大调以<b>主音</b>为 1；'
+    + '和声小调、双和声小调以<b>关系大调的主音</b>为 1（也就是 do 为 1）。'
+    + '所以 A 自然小调读 <b>6712345</b>、A 和声小调读 <b>671234#5</b>，两条都是「1 = C」。\n'
+    + '<b>旋律小调是唯一有两套记谱法的体系，面板上分成两行</b>：'
+    + '「1 = la」（<b>12b34567</b>）以音阶自己的主音为 1；'
+    + '「1 = do」（<b>67123#4#5</b>）以关系大调主音为 1 —— 同一个 A 旋律小调，两行两读。\n'
+    + '谱面左上角写着本题的「1 = 哪个音」，右上角写着音阶名与首调串；「每题音符数」在左侧自己定。';
+}
 /* 帮助文本：多数题型就是一段固定的话；视奏要按定弦换口径，所以允许是函数。 */
 function gameHelpText(){
   const h = GAME_HELP[G.type];
@@ -9139,6 +9706,7 @@ function gameOptsHTML(){
     + sel('optRange', [['0,12','0 – 12 品'], ['0,24','0 – 24 品'], ['0,5','0 – 5 品（简单）']]) + '</div>';
   if (G.type === 'intv') return '<div class="field"><label>音程范围</label>'
     + sel('optIntv', [['common','常见 6 个：m2 M2 m3 M3 P4 P5'], ['all','全部 11 个音程'], ['basic','基础 4 个：M2 m3 M3 P5']]) + '</div>';
+  if (G.type === 'jsight') return jsightOptsHTML();
   if (G.type === 'sight') return sightGroupHTML();
   return modeGroupHTML();
 }
@@ -9203,12 +9771,12 @@ const ST_BCLEF_DN = 2.549;
 const ST_BCLEF = "M0,2.449C0.302,2.245,0.527,2.09,0.672,1.983C0.818,1.878,0.97,1.746,1.127,1.59C1.284,1.433,1.415,1.255,1.522,1.059C1.606,0.914,1.679,0.745,1.738,0.554C1.798,0.365,1.828,0.182,1.834,0.008C1.834,-0.154,1.813,-0.309,1.769,-0.454C1.727,-0.601,1.654,-0.722,1.551,-0.819C1.448,-0.915,1.314,-0.962,1.148,-0.962C0.988,-0.962,0.837,-0.93,0.695,-0.867C0.556,-0.802,0.457,-0.699,0.401,-0.553C0.401,-0.54,0.394,-0.523,0.382,-0.498C0.386,-0.468,0.401,-0.445,0.43,-0.427C0.458,-0.41,0.483,-0.403,0.506,-0.403C0.518,-0.403,0.55,-0.408,0.6,-0.42C0.651,-0.431,0.693,-0.439,0.728,-0.439C0.829,-0.439,0.919,-0.403,1.001,-0.332C1.081,-0.261,1.121,-0.175,1.121,-0.074C1.121,-0.001,1.1,0.067,1.06,0.13C1.02,0.193,0.965,0.245,0.894,0.281C0.823,0.319,0.745,0.337,0.661,0.337C0.508,0.337,0.378,0.291,0.271,0.197C0.166,0.102,0.113,-0.019,0.113,-0.17C0.113,-0.362,0.172,-0.529,0.288,-0.67C0.407,-0.811,0.556,-0.916,0.739,-0.987C0.921,-1.06,1.104,-1.094,1.291,-1.094C1.496,-1.094,1.691,-1.043,1.872,-0.937C2.055,-0.834,2.199,-0.691,2.306,-0.513C2.413,-0.334,2.468,-0.143,2.468,0.064C2.468,0.43,2.346,0.77,2.101,1.085C1.857,1.401,1.555,1.674,1.194,1.907C0.953,2.065,0.564,2.279,0.027,2.549L0,2.449M2.653,-0.506C2.653,-0.574,2.678,-0.632,2.728,-0.678C2.776,-0.725,2.835,-0.748,2.905,-0.748C2.967,-0.748,3.024,-0.722,3.075,-0.67C3.127,-0.62,3.152,-0.561,3.152,-0.496C3.152,-0.427,3.125,-0.368,3.075,-0.32C3.022,-0.275,2.963,-0.252,2.896,-0.252C2.825,-0.252,2.768,-0.275,2.722,-0.326C2.676,-0.376,2.653,-0.435,2.653,-0.506M2.653,0.495C2.653,0.426,2.678,0.367,2.724,0.321C2.772,0.274,2.831,0.251,2.905,0.251C2.967,0.251,3.022,0.276,3.075,0.327C3.125,0.379,3.152,0.434,3.152,0.495C3.152,0.57,3.127,0.629,3.079,0.677C3.03,0.724,2.972,0.749,2.905,0.749C2.831,0.749,2.772,0.724,2.724,0.679C2.678,0.633,2.653,0.572,2.653,0.495";
 
 /* ============================================================
-   五线谱渲染（第 52 轮 · 视奏练习）
+   五线谱渲染（第 52 轮 · 五线谱视奏练习）
    ------------------------------------------------------------
    这一块只做一件事：把**已经算好的音符**画到谱表上。
    画哪张谱表由 stStaffSVG(notes, {st}) 决定（STAFF_TREBLE / STAFF_BASS）；
    本块不认识「吉他 / 贝斯」，也不认识「音阶 / 和弦 / 点音」—— 只认 ds / acc / dur / rest。
-   出题、判定、题板交互在下面「视奏练习」那一段，与本块彼此独立。
+   出题、判定、题板交互在下面「五线谱视奏练习」那一段，与本块彼此独立。
 
    坐标单位：一个「谱表间距」= ST_SP 像素（相邻两条线之间的距离）。
    y 轴向下为正，跟 SVG 一致。
@@ -9524,7 +10092,7 @@ function stStaffSVG(notes, o){
     + '</g></svg>';
 }
 
-/* ---------- 视奏练习（第 52 轮） ----------
+/* ---------- 五线谱视奏练习（第 52 轮） ----------
    题目是**五线谱**：按勾选的母音阶组随机挑一条音阶 × 随机主音，在该调音阶音里走一条
    带节奏的小句子，画成高音谱表；用户在指板上**按谱面顺序**点出这些音。
 
@@ -9608,8 +10176,121 @@ function setSightNames(on){
   if (G.type === 'sight') renderTrain();
 }
 
+/* ---------------- 简谱视奏练习（第 71 轮 / 第 72 轮两套旋律小调记谱法） ----------------
+   需求：视奏分两支 —— 「五线谱视奏练习」（原有，第 52 轮起）与「简谱视奏练习」（新增）。
+   简谱只认**六条体系实例**（自然大调 / 和声小调 / 旋律小调 · 1 = la / 旋律小调 · 1 = do /
+   和声大调 / 双和声小调）—— 第 72 轮把旋律小调拆成两套记谱法后，同一个音阶组 mel 占两行。
+   每条体系实例 7 条（母音阶 + 6 个子音阶），共 **42 条**；每条的首调串见 JD_SYS 那张表。
+   出题范围是**体系 → 子音阶 两级勾选**：
+     · 唯一真值 = S.jsSel（**组合键**表，元素 = 「体系实例 id|音阶 id」）——
+       体系那一级只是从它反推出来的全选 / 半选开关，**不另存一份状态**（两份状态迟早对不上）；
+     · 归一化与空池兜底都在 sanitize() 里（空表一律回落「六条体系全选」= 42 条）。
+   节奏与五线谱视奏**同一套**（同一支 sightMake）—— 这是用户点名的口径。 */
+function jdLen(){
+  /* 与 sightLen() 同构：读的是**当前 DOM 里**那个下拉（面板重绘后才会换成 S.jdLen） */
+  const el = $('optJdLen');
+  const v = parseInt((el && el.value) || '', 10);
+  const cur = isNaN(v) ? (S.jdLen || SIGHT_DEF) : v;
+  return Math.min(SIGHT_MAX, Math.max(SIGHT_MIN, cur));
+}
+function jsightOptsHTML(){
+  const on = S.jsSel || [];
+  const cards = jdSysGroups().map(sys => {
+    const list = jdGroupScales(sys.id), p = earGroupParent(sys.gid);
+    const keyOf = s => jdKey(sys.id, s.id);
+    const hit = list.filter(s => on.indexOf(keyOf(s)) >= 0).length;
+    const all = (hit === list.length);
+    return '<div class="eg' + (all ? ' on' : '') + '">'
+      + '<label class="chk"><input type="checkbox" class="jdg" value="' + sys.id + '"'
+      + (all ? ' checked' : '') + '><span>' + SX(sys.cn) + '</span>'
+      + '<span class="egn">' + hit + ' / ' + list.length + ' 条</span></label>'
+      + '<div class="jdsl">' + list.map(s => {
+          const inf = jdInfo(s, sys.id), y = on.indexOf(keyOf(s)) >= 0;
+          const star = (p && s.id === p.id) ? '★ ' : '';
+          return '<label class="jdsc' + (y ? ' on' : '') + '">'
+            + '<input type="checkbox" class="jdscb" value="' + keyOf(s) + '"' + (y ? ' checked' : '') + '>'
+            + '<span class="js-n" title="' + SX(s.cn) + '">' + SX(star + s.cn) + '</span>'
+            + '<span class="js-d">' + SX(inf ? inf.strs.join('') : '') + '</span></label>';
+        }).join('') + '</div></div>';
+  }).join('');
+  const n = on.length, tot = jdAllScaleIds().length;
+  let selN = '<select class="inp" id="optJdLen">';
+  for (let i = SIGHT_MIN; i <= SIGHT_MAX; i++)
+    selN += '<option value="' + i + '"' + (i === jdLen() ? ' selected' : '') + '>'
+          + i + ' 个音' + (i === SIGHT_DEF ? '（默认）' : '') + '</option>';
+  selN += '</select>';
+  return '<div class="field"><label>出题范围（体系 → 子音阶 两级勾选 · 只有这六行体系有首调写法）</label>'
+    + '<div class="egrid">' + cards + '</div>'
+    + '<div class="tip" style="margin-top:9px">已选 <b>' + n + '</b> / ' + tot + ' 条音阶'
+    + (n < 4 ? '　　至少勾四条，题目才够变。' : '') + '</div>'
+    + '<div style="display:flex; gap:8px; margin-top:8px">'
+    + '<button class="btn ghost sm" id="jdAllBtn">全选 42 条</button>'
+    + '<button class="btn ghost sm" id="jdMajBtn">只留自然大调体系</button>'
+    + '</div></div>'
+    + '<div class="field"><label>每题音符数</label>' + selN
+    + '<div class="tip" style="margin-top:6px">题目音在音阶音里走句，允许出现重复音'
+    + '（相邻两步不撞同一个音）；节奏与「五线谱视奏练习」完全同一套。</div></div>'
+    + '<div class="field"><label>读谱辅助</label>'
+    + '<label class="chk"><input type="checkbox" id="optJdNames"' + (S.jdNames ? ' checked' : '')
+    + '><span>数字下标注音名</span></label>'
+    + '<div class="tip" style="margin-top:6px">'
+    + '<b>简谱的「1」落在哪个音上，随体系变</b>：自然大调、和声大调以<b>主音</b>为 1；'
+    + '和声小调、双和声小调以<b>关系大调的主音</b>为 1（也就是 do 为 1）。'
+    + '所以 A 自然小调读 <b>6712345</b>、A 和声小调读 <b>671234#5</b> —— 都是「1 = C」。'
+    + '<b>旋律小调两套写法都有，分两行列出</b>：'
+    + '<b>1 = la</b> 以音阶自己的主音为 1（A 旋律小调读 <b>12b34567</b>），'
+    + '<b>1 = do</b> 以关系大调主音为 1（同一个 A 旋律小调读 <b>67123#4#5</b>）。'
+    + '前者一眼看出「上行还原了 6 / 7 级」，后者才看得出「大调降三级」的结构 —— 两套都留着练。'
+    + '谱面左上角写着本题的「1 = 哪个音」，右上角写着音阶名与首调串。</div></div>';
+}
+function setJdSel(keys){
+  const ok = jdAllScaleIds();
+  S.jsSel = (keys || []).filter(k => ok.indexOf(k) >= 0);
+  if (!S.jsSel.length) S.jsSel = ok.slice();   /* 空池兜底：回落六条体系全选 */
+  save(); renderGameOpts();
+}
+/* 体系那一级 = 全选 / 全不选**这一条体系实例**（不动别的体系行已勾的项）。
+   ⚠ 入参是体系实例 id —— mel 那两行各管各的 7 条，不能互相带。 */
+function setJdGroup(sysId, on){
+  const ids = jdGroupScales(sysId).map(s => jdKey(sysId, s.id));
+  const rest = (S.jsSel || []).filter(k => ids.indexOf(k) < 0);
+  setJdSel(on ? rest.concat(ids) : rest);
+}
+function setJdScale(key, on){
+  const a = (S.jsSel || []).slice(), i = a.indexOf(key);
+  if (on && i < 0) a.push(key);
+  if (!on && i >= 0) a.splice(i, 1);
+  setJdSel(a);
+}
+function setJdNames(on){
+  S.jdNames = !!on;
+  save();
+  if (G.type === 'jsight') renderTrain();
+}
+/* 体系那一级的「半选」只能靠 JS 设（HTML 属性里没有 indeterminate）——
+   面板每次重绘后补一次。顺带把「有勾中」的卡片点亮。 */
+function jdPanelSync(){
+  const box = $('gameOpts'); if (!box) return;
+  Array.prototype.forEach.call(box.querySelectorAll('.eg'), card => {
+    const g = card.querySelector('input.jdg'); if (!g) return;
+    const subs = card.querySelectorAll('input.jdscb'); if (!subs.length) return;
+    let hit = 0;
+    Array.prototype.forEach.call(subs, x => { if (x.checked) hit++; });
+    g.indeterminate = (hit > 0 && hit < subs.length);
+    card.classList.toggle('on', hit > 0);
+  });
+}
+/* 简谱视奏出题：与五线谱视奏**共用**走句 / 节奏槽位 / 音域窗那套内核（sightMake），
+   只有两处不同 —— ① 题库换成 S.jsSel 勾的子音阶；② 谱面换成首调数字（r.jd = true）。
+   ⚠ 题库为空时必须自己兜底：别把空池塞给 sightMake（那边 pick() 会拿到 undefined）。 */
+function jsightMake(len){
+  /* 组合键先过一遍「这条音阶在**这条体系**下确实有首调串」—— 脏存档里的老键 / 错配键会被滤掉 */
+  const pool = (S.jsSel || []).filter(k => !!jdInfo(scaleById(jdKeyScale(k)), jdKeySys(k)));
+  const use = pool.length ? pool : jdGroupScales('major').map(s => jdKey('major', s.id));
+  return sightMake(len, sightVoice(), { pool:use, jd:true });
+}
 /* ---------------- 音阶填空：出题范围（第 55 轮） ----------------
-   与「音阶听辨」「视奏练习」共用同一套母音阶组卡片：勾哪一组，就把该组的母音阶
+   与「音阶听辨」「五线谱视奏练习」共用同一套母音阶组卡片：勾哪一组，就把该组的母音阶
    与它的全部子音阶（各调式）一起放进填空题库。琶音组不参与 —— 那是和弦音型，
    不是「补全一条音阶的音」。
    升级前的三档下拉在这里一一对应成预设按钮：
@@ -9836,10 +10517,23 @@ function sightVoice(){ return isBassInst() ? SIGHT_VOICE.bass : SIGHT_VOICE.guit
 /* ---------------- 出题 ----------------
    内核收一个「视奏声部」v：吉他 / 贝斯共用走句、节奏槽位、拼写与调号，
    三处不同（谱表 / 记谱八度 / 音域窗）全在 SIGHT_VOICE 里，不在这里写 if。 */
-function sightMake(len, v){
-  const pool = earPool(S.sightGroups);
-  const sc = scaleById(pick(pool.length ? pool : earPool(['major'])));
+function sightMake(len, v, o){
+  o = o || {};
+  /* o.pool = 换题库（简谱视奏按 S.jsSel 给）；o.jd = 谱面走首调数字。
+     不传 o 时逐字保持老行为 —— 五线谱视奏那两条路径一个字都不变。 */
+  const jd = !!o.jd;
+  const pool = o.pool || earPool(S.sightGroups);
+  /* 题库元素有两种形态：五线谱那条是**裸音阶 id**；简谱那条传了 o.pool，
+     元素是 jdKey 组合键（体系实例 id|音阶 id）—— 因为 mel 的两套记谱法共用同 7 条音阶，
+     只有键不同才分得开。按「传没传 o.pool」判形态，不去猜元素内容。 */
+  const useKey = !!o.pool;
+  const pk = pick(pool.length ? pool : earPool(['major']));
+  const sc = scaleById(useKey ? jdKeyScale(pk) : pk);
+  const sysId = useKey ? jdKeySys(pk) : null;
   const rootPc = pick(NATURAL);
+  /* 简谱的「1」按声部舒适音区锚定一次，挂在返回值上 ——
+     渲染层不重算（它不许读全局，见 jdScoreSVG 的头注）。 */
+  const jdR1 = jd ? jdRef1(sc, rootPc, v.ref || 60, sysId) : null;
   const ky = sightKey(sc, rootPc);
   const pos = sightPositions();
   /* 音域窗按谱位判 —— 窗要管的是「谱面会拖出几条加线」，那才是要控制的量 */
@@ -9915,11 +10609,16 @@ function sightMake(len, v){
     const midi = seq[k++];
     const w = sightWritten(midi, ky.letters, v.oct);
     const it = { dur:sl.u / 2, ds:w.ds, acc:w.acc, L:w.L, midi:midi,
-                 name:sightWName(midi, ky.letters, v.oct) };
+                 /* 简谱那条的 name 用**实发音名**（nameOf(midi) + 八度）：简谱没有谱表，
+                    标一个「比实际发音高八度」的记谱音名反而找不到位置。 */
+                 name: jd ? (nameOf(midi, S.flats) + (Math.floor(midi / 12) - 1))
+                          : sightWName(midi, ky.letters, v.oct) };
+    if (jd) it.jd = jdNote(sc, rootPc, midi, jdR1, sysId);
     items.push(it); notes.push(it);
   });
-  return { v:v, staff:v.staff, sc:sc, rootPc:rootPc, sig:ky.sig, letters:ky.letters,
-           tt:tt, tb:tb, items:items, notes:notes, ask:seq.slice(), narrow:narrow };
+  return { v:v, jd:jd, ref1:jdR1, sysId:sysId, staff:v.staff, sc:sc, rootPc:rootPc, sig:ky.sig,
+           letters:ky.letters, tt:tt, tb:tb, items:items, notes:notes,
+           ask:seq.slice(), narrow:narrow };
 }
 /* 吉他视奏出题（第 52 轮）：高音谱表 + 不设音域窗。
    题目在「当前指板范围」里属于本题音阶的音高中走句。 */
@@ -9952,19 +10651,32 @@ function sightTip(msg){
 function sightBoxRender(){
   const box = $('sightBox'); if (!box) return;
   const r = G.round;
-  if (G.type !== 'sight' || !r || r.kind !== 'sight'){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  /* 五线谱视奏 / 简谱视奏**共用这一块题板**（第 71 轮）：题型名不同，但题目对象同形
+     （都是 kind:'sight'），差别只有两处：r.jd（画 stStaffSVG 还是 jdScoreSVG）与
+     r.sysId（简谱题属于哪条体系实例 —— mel 两套记谱法靠它区分，五线谱题为 null）。
+     这样「撤回 / 清空 / 提交 / 试听 / 同音高全亮」五处判据一个字都不用动。 */
+  if ((G.type !== 'sight' && G.type !== 'jsight') || !r || r.kind !== 'sight'){
+    box.style.display = 'none'; box.innerHTML = ''; return;
+  }
+  const jd = !!r.jd;
+  const names = jd ? !!S.jdNames : !!S.sightNames;
   r.notes.forEach((n, i) => { n.done = (i < r.ans.length); });
-  const staff = stStaffSVG(r.items, { sig:r.sig, tt:r.tt, tb:r.tb, names:!!S.sightNames,
-                                      st:r.staff });
+  /* 简谱那条：调号拼写跟着**「1」的音高类**走（1 就是关系大调的主音，
+     所以直接喂 keyFlats —— 它的入参本来就是「大调主音的音高类」）。 */
+  const staff = jd
+    ? jdScoreSVG(r.items, { sc:r.sc, rootPc:r.rootPc, ref1:r.ref1, sysId:r.sysId, tt:r.tt, tb:r.tb,
+                            flatPref:keyFlats(jdFramePc(r.sc, r.rootPc, r.sysId) || 0), names:names })
+    : stStaffSVG(r.items, { sig:r.sig, tt:r.tt, tb:r.tb, names:names, st:r.staff });
   const bad = r.bad || [];
   const ans = r.ans.length
     ? r.ans.map((x, i) => '<span class="sbchip'
         + (bad.indexOf(i) >= 0 ? ' bad' : (i === r.ans.length - 1 ? ' cur' : '')) + '"><i>'
         + (i + 1) + '</i>' + x.nm + '</span>').join('')
-    : '<span class="tip">还没点音 —— 在指板上按谱面顺序点出这些音。</span>';
+    : '<span class="tip">还没点音 —— 在指板上按' + (jd ? '简谱' : '谱面')
+      + '顺序点出这些音。</span>';
   const narrow = r.narrow
     ? '<div class="tip" style="margin-top:4px">当前指板范围'
-      + (r.voice === 'bass' ? '（再算上低音谱表的常用音域）' : '')
+      + (r.voice === 'bass' ? (jd ? '（再算上贝斯的常用音区）' : '（再算上低音谱表的常用音域）') : '')
       + '装不下整条音阶：题目只在这段范围里点得出来的音中走句。</div>'
     : '';
   box.style.display = '';
@@ -9976,7 +10688,7 @@ function sightBoxRender(){
     +   '<button class="btn sm" id="sightUndoBtn"' + (r.ans.length ? '' : ' disabled') + '>↶ 撤回上一步</button>'
     +   '<button class="btn ghost sm" id="sightClearBtn"' + (r.ans.length ? '' : ' disabled') + '>清空作答</button>'
     +   '<button class="btn ghost sm" id="sightPlayBtn">▶ 试听题目</button>'
-    +   '<button class="btn ghost sm" id="sightNameBtn">' + (S.sightNames ? '☑' : '☐') + ' 显示音名</button>'
+    +   '<button class="btn ghost sm" id="sightNameBtn">' + (names ? '☑' : '☐') + ' 显示音名</button>'
     +   '<button class="btn primary sm" id="sightGoBtn">✅ 提交答案</button>'
     +   '<span style="flex:1 1 auto"></span>'
     +   '<span class="tip" id="sightTip">' + sightTipText() + '</span>'
@@ -10003,7 +10715,7 @@ function sightPaintSame(){
 }
 function sightAfterRender(){
   sightBoxRender();
-  if (G.type === 'sight') sightPaintSame();
+  if (G.type === 'sight' || G.type === 'jsight') sightPaintSame();
 }
 function sightUndo(){
   const r = G.round;
@@ -10059,7 +10771,7 @@ function sightSubmit(){
     G.score += 10 + Math.min(10, G.streak);
     r.tip = '全部正确 · ' + r.ask.length + ' / ' + r.ask.length;
     renderTrain(); paintStats();
-    finishRound('视奏全部正确！');
+    finishRound(r.jd ? '简谱视奏全部正确！' : '视奏全部正确！');
     return;
   }
   G.wrong++; G.streak = 0; G.score = Math.max(0, G.score - 6);
@@ -10071,6 +10783,7 @@ function sightSubmit(){
 function renderGameOpts(){
   $('gameOpts').innerHTML = '<div class="card-t"><h3>练习设置</h3></div>' + gameOptsHTML();
   $('gameHelp').innerHTML = gameHelpText().replace(/\n/g, '<br>');
+  jdPanelSync();   /* 体系级的「半选」HTML 属性设不了，重绘后补一次 */
 }
 
 /* ---------- 音符池 ---------- */
@@ -10081,7 +10794,7 @@ function pickPool(){
   if (m === 'all') return [0,1,2,3,4,5,6,7,8,9,10,11];
   return NATURAL.slice();
 }
-/* 填空的题库：由勾选的母音阶组展开（与「音阶听辨」「视奏练习」同一个 earPool）。
+/* 填空的题库：由勾选的母音阶组展开（与「音阶听辨」「五线谱视奏练习」同一个 earPool）。
    第 55 轮前那三档下拉（基础 / 全部教会调式 / 全部音阶）连池子一起删了 —— 它们
    本来就等价于「组」的某种组合：只留自然大调体系 = 旧「全部教会调式」；全选 = 旧「全部音阶」。 */
 function pickScalePool(){
@@ -10141,7 +10854,9 @@ function playRaw(midis, gap, dur){
      · 要点的位置落到画外，进度条永远走不完（音阶填空 / 视奏）
    ⚠ 第 56 轮·第 3 批：以前只有「吉他 ↔ 贝斯」跨族换定弦才换题（因为谱表要跟着换），
      同族换定弦（标准 → Drop D）完全没管 —— 低音弦那一条整条错位。现在三样一起管。 */
-const SCOPE_KINDS = { find:1, fill:1, sight:1 };   /* 只有这三个题型依赖指板坐标 */
+/* 只有这几个题型依赖指板坐标（第 71 轮起把简谱视奏也加进来 —— 它的题目同样钉在
+   出题时的定弦 / 品段 / 弦组上，那些一变当前题就自相矛盾）。 */
+const SCOPE_KINDS = { find:1, fill:1, sight:1, jsight:1 };
 function scopeSig(){
   const g = stringGroup();
   return S.tuning + '|' + S.rangeStart + '|' + S.rangeCount + '|'
@@ -10185,7 +10900,7 @@ function newRound(){
                   tt:4, tb:4, items:[], notes:[], ask:[], ans:[], hl:null, bad:[],
                   tip:'当前指板范围里一个音都点不到 —— 把范围或弦组放宽一点再开始。',
                   reveal:null, showScale:false, total:0, narrow:true };
-      setPrompt('视奏练习', '先把指板范围放宽一些', 0, 1);
+      setPrompt('五线谱视奏练习', '先把指板范围放宽一些', 0, 1);
       showChoices([]);
     } else {
       const r = {
@@ -10202,6 +10917,38 @@ function newRound(){
          答过的位置仍按本题主音画 DEGCOLOR + 音级名，只是不再污染全局。 */
       setPrompt('<em>' + nameOf(q.rootPc, S.flats) + '</em> ' + q.sc.cn,
         '按谱面顺序点出 ' + q.notes.length + ' 个音 · 判定卡八度（同音高换位置算对）',
+        0, q.notes.length);
+      showChoices([]);
+    }
+  }
+
+  else if (G.type === 'jsight'){
+    /* 简谱视奏练习（第 71 轮）：谱面是首调数字，不画谱表。
+       仍然照定弦取「声部」—— 声部的音域窗要用它（题板不用 staff）。
+       题目对象与五线谱视奏**同形**（kind:'sight'），只多一个 jd:true ——
+       这样作答 / 撤回 / 清空 / 提交 / 同音高全亮那五处判据一个字都不用改。 */
+    const v = sightVoice();
+    const q = jsightMake(jdLen());
+    if (!q){
+      G.round = { kind:'sight', jd:true, ref1:0, staff:v.staff, voice:v.key, grp:stringGroup(),
+                  sc:scaleById('major'), rootPc:0, sig:0, letters:{},
+                  tt:4, tb:4, items:[], notes:[], ask:[], ans:[], hl:null, bad:[],
+                  tip:'当前指板范围里一个音都点不到 —— 把范围或弦组放宽一点再开始。',
+                  reveal:null, showScale:false, total:0, narrow:true };
+      setPrompt('简谱视奏练习', '先把指板范围放宽一些', 0, 1);
+      showChoices([]);
+    } else {
+      const r = {
+        kind:'sight', jd:true, ref1:q.ref1, sysId:q.sysId, staff:q.staff, voice:q.v.key, grp:stringGroup(),
+        sc:q.sc, rootPc:q.rootPc, sig:q.sig, letters:q.letters,
+        tt:q.tt, tb:q.tb, items:q.items, notes:q.notes, ask:q.ask,
+        ans:[], hl:null, bad:[], tip:null, reveal:null,
+        showScale:false, total:q.notes.length, narrow:q.narrow
+      };
+      r.reveal = n => r.ans.some(x => x.s === n.s && x.f === n.f);
+      G.round = r;
+      setPrompt('简谱视奏练习 · <em>' + nameOf(q.rootPc, S.flats) + '</em> ' + q.sc.cn,
+        '按数字简谱顺序点出 ' + q.notes.length + ' 个音 · 判定卡八度（同音高换位置算对）',
         0, q.notes.length);
       showChoices([]);
     }
@@ -10397,7 +11144,7 @@ function renderTrain(){
       return null;
     }) : null
   });
-  /* 视奏练习：题板与「同音高全亮」都在这里收尾（都依赖刚重建的 DOM） */
+  /* 五线谱视奏练习：题板与「同音高全亮」都在这里收尾（都依赖刚重建的 DOM） */
   sightAfterRender();
 }
 
@@ -11790,6 +12537,12 @@ function fpRangeWin(){
 function fpChipShort(t){
   return String(t).replace(/^把位\s*/, '').replace(/\s*品$/, '').replace(/\s*型$/, '');
 }
+/* 跨度的紧凑写法：`2–6` / `12`（单点不写区间）。需要带单位的调用点自己接「 品」。
+   —— 按钮、菜单、chip、顺序槽各处都要写这个跨度，第 70 轮收到一处，
+   免得同一种写法在四个地方各写一遍、哪天只改一处。 */
+function fpSpanCn(sp){
+  return sp ? String(sp[0] + (sp[1] > sp[0] ? '–' + sp[1] : '')) : '';
+}
 /* ---- 逐块走句方向（第 66 轮）----
    第 64/65 轮的方向是**一条全局设置**（工具条上的上行 / 下行 / 上下行），
    在 psScoreHTML 末尾对整条序列施加一次。本轮改成 **一块走完才换下一块**，方向按块给 ——
@@ -11987,7 +12740,9 @@ function fpSlotPaint(){
   const d = FP_DRAFT || [];
   el.innerHTML = d.map((k, i) => {
     const it = FP_CMAP.get(k);
-    const nm = it ? (FP_PAT_SHORT[it.pid] || it.pid) + ' ' + it.name : k;
+    /* it.full：位置名已经自带把位时用它（CAGED 五型 —— 顺序槽上不能只写「2–6 品」，
+       分不清是 A 型还是 D 型）。其余指型没有这个字段，仍走 it.name。 */
+    const nm = it ? (FP_PAT_SHORT[it.pid] || it.pid) + ' ' + (it.full || it.name) : k;
     const c = fpBDirCode(k), own = !!c;
     const gly = own ? (FP_BDIR_GLY[c] || '?') : (FP_DIR_GLY[S.psDir] || '↑');
     const tip = own ? ('这一段的走向：' + FP_BDIR_CN[c] + '（点一下换一档）')
@@ -12014,9 +12769,14 @@ function fpSlotMove(from, to){
 function fpPanelRefresh(){ if (FP_POS_OPEN) fpPosPanelPaint(fpPosCatalog()); }
 
 /* 可用位置清单（按指型系统分行；同一系统里再按「起始弦」分组）：
-   [ { pid, cn, rows:[ { sub, items:[ { pid, bi, label, name, chip, span } ] } ] } ]
+   [ { pid, cn, rows:[ { sub, items:[ { pid, bi, label, name, chip, span, full } ] } ] } ]
    ⚠ 走 patternList() —— 五声族的 4NPS 与宽指型本来就是同一个槽位（互相顶替），
-     不能两条都列，否则会点到一个铺不出块的档位。 */
+     不能两条都列，否则会点到一个铺不出块的档位。
+   ⚠ CAGED 走 currentBlocks({cagedAll:true})（第 70 轮）：五型在整条琴颈上各出现 2–3 次，
+     块名却只有型名 —— 于是**行 = 型**（A / G / E / D / C 五行，恒列出全部指型）、
+     **项 = 这一型的一个具体把位**（按品从低到高），使「五人五型 × 每个把位」都能单独点到。
+     不这么分的话：① 一个型的两三个把位会挤成同名同 chip 的两三个方块，点哪个都一样；
+     ② 老口径只枚举到一个八度，琴颈另一半（如 G 调的 0–8 品）整段没有 CAGED 可点。 */
 function fpPosCatalog(){
   const sc = scaleById(S.scale);
   if (!sc) return [];
@@ -12027,7 +12787,7 @@ function fpPosCatalog(){
       if (P.id === 'off') return;
       S.pattern = P.id;
       let b = null;
-      try { b = currentBlocks(); } catch(e){ b = null; }
+      try { b = currentBlocks({ cagedAll:true }); } catch(e){ b = null; }
       if (!b || !b.list.length) return;
       const seen = new Map(), rows = [];
       b.list.forEach((blk, i) => {
@@ -12036,12 +12796,18 @@ function fpPosCatalog(){
            列一个选了也不出音的位置，只会让人以为坏了。 */
         if (!sp || sp[1] < w[0] || sp[0] > w[1]) return;
         const lab = String(blk.label), cut = lab.indexOf('·');
-        const sub  = cut >= 0 ? lab.slice(0, cut).trim() : '';
-        const name = cut >= 0 ? lab.slice(cut + 1).trim() : lab;
+        let sub  = cut >= 0 ? lab.slice(0, cut).trim() : '';
+        let name = cut >= 0 ? lab.slice(cut + 1).trim() : lab;
+        let chip = fpChipShort(name), full = null;
+        if (P.id === 'caged'){
+          sub  = lab;                                   /* 行名 = 型名（A 型 / G 型 …） */
+          name = fpSpanCn(sp) + ' 品';                   /* 项名 = 这一型的某个把位 */
+          chip = fpSpanCn(sp);
+          full = fpChipShort(lab) + ' ' + name;          /* 顺序槽 / 摘要里不能只剩「2–6 品」 */
+        }
         let g = seen.get(sub);
         if (!g){ g = { sub:sub, items:[] }; seen.set(sub, g); rows.push(g); }
-        g.items.push({ pid:P.id, bi:i, label:lab, name:name,
-                       chip:fpChipShort(name), span:sp });
+        g.items.push({ pid:P.id, bi:i, label:lab, name:name, chip:chip, span:sp, full:full });
       });
       if (rows.length) out.push({ pid:P.id, cn:FP_PAT_SHORT[P.id] || P.cn, rows:rows });
     });
@@ -12093,8 +12859,10 @@ function fpMergeBlocks(sel){
   try {
     sel.forEach(it => {
       S.pattern = it.pid;
+      /* 与 fpPosCatalog 同参（含 cagedAll）—— 两处必须生成同一份 list，
+         否则 it.bi 在两个清单里指向不同的块。 */
       let b = null;
-      try { b = currentBlocks(); } catch(e){ b = null; }
+      try { b = currentBlocks({ cagedAll:true }); } catch(e){ b = null; }
       const src = (b && b.list && b.list[it.bi]) ? b.list[it.bi] : null;
       if (!src) return;
       const idx = merged.list.length;
@@ -12184,7 +12952,12 @@ function fpPosPanelPaint(cat){
             + ' title="' + SX(it.label) + ' · ' + it.span[0] + '–' + it.span[1] + ' 品'
             + (n ? ' · 练习顺序第 ' + n + ' 段' : '') + '">' + SX(it.chip) + '</button>';
         }).join('') + '</div>'
-      + '<button type="button" class="btn sm fp-pos-pick" data-pid="' + g.pid + '">全选</button>'
+      + '<button type="button" class="btn sm fp-pos-pick" data-pid="' + g.pid + '"'
+      /* CAGED 的行 = 一个型（不是「起始弦组」），它的「全选」就该只管这一型 ——
+         只管整个指型系统的话，在「A 型」那行按下去会把 G/E/D/C 一起选中。 */
+      + (g.pid === 'caged' ? ' data-row="' + SX(r.sub) + '" title="把「' + SX(r.sub)
+          + '」的全部把位一起加入 / 一起去掉"' : '')
+      + '>全选</button>'
       + '</div>').join('')).join('');
   }
   fpSlotPaint();
@@ -12197,11 +12970,12 @@ function fpPosPanelPaint(cat){
       + (draft.length ? '（图上按' + (FP_DORD ? '练习顺序' : '品序') + '）' : '');
   }
 }
-/* 草稿层级的开关：k = 'pid:bi' 切一个；pid 非空则整个指型系统（清单里的那些行）全加 / 全去。
+/* 草稿层级的开关：k = 'pid:bi' 切一个；pid 非空则整个指型系统（清单里的那些行）全加 / 全去；
+   第 3 参 sub 非空则**只管那一行**（第 70 轮：CAGED 的行 = 一个型）。
    ⚠ 第 66 轮起**只动草稿**：不写 S、不重画整页 —— 原来点一下就来一次 save + fpRender，
      整页跟着重画（看着就是「每选一个就弹一下」），也没法一次挑好几个再一起定顺序。
      落盘点是「完成选择」，见 fpPosOK 的处理。 */
-function fpPosToggle(k, pid){
+function fpPosToggle(k, pid, sub){
   if (!FP_POS_OPEN) return;
   const d = FP_DRAFT || (FP_DRAFT = []);
   if (k){
@@ -12211,7 +12985,12 @@ function fpPosToggle(k, pid){
     const g = fpPosCatalog().filter(x => x.pid === pid)[0];
     if (!g) return;
     const keys = [];
-    g.rows.forEach(r => r.items.forEach(it => keys.push(fpSelKey(it))));
+    if (sub === undefined || sub === null) g.rows.forEach(r => r.items.forEach(it => keys.push(fpSelKey(it))));
+    else {
+      const r = g.rows.filter(x => x.sub === sub)[0];
+      if (!r) return;
+      r.items.forEach(it => keys.push(fpSelKey(it)));
+    }
     if (keys.every(x => d.indexOf(x) >= 0)) FP_DRAFT = d.filter(x => keys.indexOf(x) < 0);
     else keys.forEach(x => { if (d.indexOf(x) < 0) d.push(x); });
   } else return;
@@ -12672,13 +13451,15 @@ function fpRender(){
   if (!bl){
     try {
       if (savedP === 'off') S.pattern = '3nps';
-      bl = currentBlocks();
+      /* cagedAll：练习页的 CAGED 一律按**整条琴颈的全部落位**铺 —— 与位置清单同口径。
+         否则「自定义」点得到的高把位，切回「跟随」就整段消失；品段窄时更会直接空白。 */
+      bl = currentBlocks({ cagedAll:true });
       if ((!bl || !bl.list.length) && S.pattern !== 'off'){
         const fb = ['3nps', 'caged', 'pentwide', '4nps'];
         for (let i = 0; i < fb.length; i++){
           if (fb[i] === S.pattern) continue;
           S.pattern = fb[i];
-          const b2 = currentBlocks();
+          const b2 = currentBlocks({ cagedAll:true });
           if (b2 && b2.list.length){ bl = b2; usedP = fb[i]; break; }
         }
       }
@@ -12687,8 +13468,9 @@ function fpRender(){
 
   fpPosPaint({
     custom: custom, n: custom ? sel.length : 0,
-    txt: custom ? sel.map(it => (FP_PAT_SHORT[it.pid] || it.pid) + ' ' + it.name
-      + '（' + it.span[0] + '–' + it.span[1] + ' 品）').join(' · ') : '',
+    /* it.full（CAGED 五型）本身就写着把位，别再跟一个括号重复一遍 */
+    txt: custom ? sel.map(it => (FP_PAT_SHORT[it.pid] || it.pid) + ' '
+      + (it.full || (it.name + '（' + fpSpanCn(it.span) + ' 品）'))).join(' · ') : '',
     usedP: usedP, blN: (bl && bl.list) ? bl.list.length : 0
   });
   fpPosPanelPaint(cat);
@@ -12864,7 +13646,8 @@ function fpBind(){
     const chip = e.target.closest ? e.target.closest('.fp-chip') : null;
     if (chip){ fpPosToggle(chip.dataset.k, null); return; }
     const pick = e.target.closest ? e.target.closest('.fp-pos-pick') : null;
-    if (pick) fpPosToggle(null, pick.dataset.pid);
+    /* data-row 只在 CAGED 上有（行 = 一个型）；其余指型 undefined → 仍是「整个系统」 */
+    if (pick) fpPosToggle(null, pick.dataset.pid, pick.dataset.row);
   });
   const pord = $('fpOrdSel');
   if (pord) pord.addEventListener('change', () => {
@@ -13254,6 +14037,11 @@ function bind(){
     if (n && n.id === 'optHide'){ S.fillHide = parseInt(n.value, 10) || 40; save(); }
     if (n && n.id === 'optSightLen'){ S.sightLen = sightLen(); save(); }
     if (n && n.id === 'optSightNames') setSightNames(n.checked);
+    /* 简谱视奏：体系级 / 子音阶级两级勾选 + 每题音符数 + 音名标注 */
+    if (n && n.classList && n.classList.contains('jdg'))   setJdGroup(n.value, n.checked);
+    if (n && n.classList && n.classList.contains('jdscb')) setJdScale(n.value, n.checked);
+    if (n && n.id === 'optJdLen'){ S.jdLen = jdLen(); save(); }
+    if (n && n.id === 'optJdNames') setJdNames(n.checked);
   });
   $('gameOpts').addEventListener('click', e => {
     if (!e.target || !e.target.id) return;
@@ -13264,6 +14052,8 @@ function bind(){
     if (e.target.id === 'fillAllBtn')  setFillGroups(EAR_GROUPS.map(g => g.id));
     if (e.target.id === 'fillBaseBtn') setFillGroups(FILL_GROUPS_DEF);
     if (e.target.id === 'fillMajBtn')  setFillGroups(['major']);
+    if (e.target.id === 'jdAllBtn') setJdSel(jdAllScaleIds());
+    if (e.target.id === 'jdMajBtn') setJdSel(jdGroupScales('major').map(s => jdKey('major', s.id)));
   });
   /* 视奏题板：每次重绘都换一批新按钮，监听挂在容器上才不会丢 */
   $('sightBox').addEventListener('click', e => {
@@ -13273,7 +14063,10 @@ function bind(){
     if (b.id === 'sightClearBtn') sightClear();
     if (b.id === 'sightGoBtn')    sightSubmit();
     if (b.id === 'sightPlayBtn')  sightPlay();
-    if (b.id === 'sightNameBtn')  setSightNames(!S.sightNames);
+    /* 「显示音名」是两支视奏各自的设置项 —— 按本题是不是简谱分发 */
+    if (b.id === 'sightNameBtn'){
+      if (G.round && G.round.jd) setJdNames(!S.jdNames); else setSightNames(!S.sightNames);
+    }
   });
 
   /* 音阶库 */
@@ -13428,6 +14221,10 @@ function bind(){
   };
   $('vcWin').onchange  = e => { S.vcWin  = parseInt(e.target.value, 10) || 4; S.vcScheme = 0; save(); vcRender(); };
   $('vcSpan').onchange = e => { S.vcSpan = parseInt(e.target.value, 10) || 9; S.vcScheme = 0; save(); vcRender(); };
+  $('vcMode').onchange = e => {
+    S.vcMode = (e.target.value === 'easy') ? 'easy' : 'lead';
+    S.vcScheme = 0; save(); vcRender();
+  };
   $('vcSchemes').addEventListener('click', e => {
     const b = e.target.closest ? e.target.closest('[data-vcs]') : null;
     if (!b) return;
@@ -14645,14 +15442,14 @@ const CQ_IV12 = [
    两种摆法都算同一个和弦，所以下面这一对音程都要认：
      7 半音（纯五度）→ 原位 `X5`    （低音就是根音）
      5 半音（纯四度）→ 转位 `X5/Y`  （低音是五度、根音在上）
-   其余音程不硬安名字 —— 理由写在 cqTwoHTML 的「特殊和弦」分支里。 */
+   其余音程不硬安名字 —— 理由写在 cqTwoHTML 的「和弦」分支里。 */
 const CQ_TWO_POW = [5, 7];
 
 /* ---------- 只有两个音时的那一块（第 50 轮） ----------
    只在 pcs.length === 2 时被调用（见 cqResults 的第二个分支）。
    两条都要**各自明确写出来**，不互相顶替：
      ① 音程关系标识 —— 低音 → 高音，给出音程名 + 缩写 + 半音数，再给出反过来的读数；
-     ② 特殊和弦     —— 低音到高音是纯五度 / 纯四度时，这两个音**本身就是一个五和弦**，
+     ② 和弦         —— 低音到高音是纯五度 / 纯四度时，这两个音**本身就是一个五和弦**，
                         这时把和弦名一并写出；认不出两音和弦就写「不适用」并说明为什么。
    ⚠ 方向必须按**实际音高**定（pickLow = 已选里 midi 最低的位置），与斜线和弦同口径：
      「五度在低、根音在上」是转位，要写成 `X5/Y`，不能倒过来说成另一个调的原位和弦。 */
@@ -14678,8 +15475,9 @@ function cqTwoHTML(pcs){
         + stringNo(bass.s, tuning().mid.length) + ' 弦 ' + bass.f + ' 品）'
         + '</div></div>';
 
-  /* ② 特殊和弦：通用标记里有名字的两音和弦只有五和弦 */
-  h += '<div class="mres"><div class="mh"><span class="tag">特殊和弦</span>';
+  /* ② 和弦（第 72 轮按用户要求把标识由「特殊和弦」改为「和弦」，只是文案）：
+        通用标记里有名字的两音和弦只有五和弦 */
+  h += '<div class="mres"><div class="mh"><span class="tag">和弦</span>';
   if (CQ_TWO_POW.indexOf(iv) >= 0){
     const root = (iv === 7) ? lo : hi;                 /* 转位时根音在上面那颗音 */
     const sym  = nm(root) + '5' + (iv === 5 ? '/' + nm(lo) : '');

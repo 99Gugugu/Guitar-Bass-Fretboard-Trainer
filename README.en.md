@@ -47,7 +47,7 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 |---|---|
 | 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio. Every fretboard diagram carries **TAB + staff** underneath, playable and loopable |
 | 🎵 **Fretboard Practice** | Modular sequence practice: pick a scale → pick **specific position blocks** (multi-select, even across fingering systems, re-orderable) → give each block one of **8 walk modes**. Blocks are walked one at a time, with fretboard and score highlighting in sync |
-| 🎧 **Ear & Sight Practice** | Six drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, and **staff sight reading** — the prompt is notated on a staff with key signature and rhythm, and you tap the notes in order on the neck. The staff follows the tuning |
+| 🎧 **Ear & Sight Practice** | Seven drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, **staff sight reading** and **numbered-notation (jianpu) sight reading** — same "read it, then tap it in order on the neck", once from a staff with key signature and rhythm (the staff follows the tuning), once from movable-do numbers (6 system entries × 7 sub-scales each = 42) |
 | 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
 | 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key |
 | 🧮 **Scale & Harmony** | Seven degrees × five chord-tone extension layers; click any cell to jump to its shape |
@@ -55,7 +55,7 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | 🔗 **Progression Trainer** | 456 chord progressions with note-by-note voice leading and recommended fingerings |
 | 🎸 **Jam** | 200 backing tracks. The progression is laid out bar by bar, then the **minimum-hand-travel** voicings, then the improvisation material available over each chord |
 | 🔍 **Improvisation Lookup** | Given a chord quality and key, list usable scales, arpeggios and substitutions |
-| 🎹 **Voicing** | Treat the whole progression as one object and search for the lowest total hand travel; returns several distinct optima |
+| 🎹 **Voicing** | Two modes: **best voice leading** treats the whole progression as one object and searches for the lowest total hand travel (returning several distinct optima); **most common / easiest** picks each chord independently by textbook criteria (first position first, no gap inside the string group, fewest fingers…) — the equivalent of reading a chord chart |
 | 🖐 **2-1-2 Arpeggios** | Arpeggio shapes built on a `2-1-2` notes-per-string alternation, starting from the 6th / 5th / 4th / 3rd string |
 | 🎯 **Chord Lookup** | The other direction: tap notes on the neck (3 or more) to **name the chord**; tap exactly two notes and it names their **interval** and checks whether they form a power chord (`X5`). Coarse / degree-aware / diatonic modes; a non-root bass becomes a slash chord; when nothing fits, it falls back to the five trichord families (root removed, six notes split into two groups of three) |
 | 🎼 **Scale Lookup** | Tap notes on the neck (5 or more) to **find the scale**. All 82 scales × 12 tonics = 984 readings, layered by "how many notes you are still missing". Every reading of the same pitch-class set is listed side by side — which is why a seven-note scale can only ever be pinned down to its **parent-scale group** |
@@ -86,9 +86,38 @@ Read it, then tap the matching notes **in order** on the neck.
   All correct → next question and a point; any wrong → those notes get a red cross, minus 6, and you
   stay on the question to undo and resubmit.
 - **Reading aids**: **▶ play the prompt** (sounds the written pitches in order; rests take time but stay
-  silent) and **☐ show note names** under the staff.
+  silent) and **☐ show note names** (off by default) under the staff.
 - A live answer row records what you tapped, with **↶ undo** and **clear**; note count per question is
   yours to pick (3–12, default 5).
+
+## Read the numbers, find it on the neck: jianpu (numbered notation) sight reading
+
+The **seventh drill** in Practice, and the same exercise read a different way. The prompt is drawn as
+**jianpu** — movable-do numbers with octave dots, accidentals, duration marks (an underline for
+eighths, a dot for dotted quarters, dashes for half and whole notes) and bar lines. The rhythm comes
+from **exactly the same question generator** as staff sight reading. Read it, then tap the notes in
+order on the neck.
+
+- **The score states `1 = X` in the top-left corner** — in movable-do notation, *where 1 sits* is the
+  whole point; without it the page is unreadable. Two of the three minor systems are written with
+  **the relative major's tonic as 1** (hence `6712345`), while **melodic minor keeps both spellings
+  and therefore occupies two rows**: `12b34567` (1 = la, its own tonic — you can see at a glance
+  that the ascending 6th and 7th are restored) and `67123#4#5` (1 = do, the relative major's tonic —
+  the only spelling that shows the "major with a flat 3rd" shape).
+- **6 system entries × 7 sub-scales = 42**, every sub-scale spelled in movable do: rotating the
+  parent scale's base string left by one degree gives the next mode. Natural major `1234567` →
+  Dorian `2345671` → Phrygian `3456712` → Lydian `4567123` → Mixolydian `5671234` → natural minor
+  `6712345` → Locrian `7123456`; likewise harmonic minor `671234#5`, harmonic major `12345b67`
+  and double harmonic minor `671#234#5`. Melodic minor appears twice — once per spelling
+  (`12b34567`… under 1 = la, `67123#4#5`… under 1 = do).
+- **Two-level selection**: the system row only means select-all / select-none; the real question pool
+  is the **sub-scale level** (a system row shows as **indeterminate** when only part of it is ticked).
+  Clearing everything falls back to all six system entries selected (42 entries).
+- Note count per question is 3–12 (default 5).
+- Everything else matches staff sight reading: **every spot with that pitch lights up**, **octave is
+  judged strictly**, **▶ play the prompt / ☐ show note names** (off by default), **↶ undo / ✅ submit**,
+  and a correct answer advances automatically.
+  Note names here are the **sounding** names — jianpu has no written-octave convention.
 
 ## Fretboard Practice: scale × fingering system × position × walk mode
 
@@ -104,10 +133,13 @@ drilled it inside **one position**. This tab does one thing only: **practise jus
   position-second**; for other open tunings (DADGAD, Open G, Open D, FACGCE, DAEAC#E, CGDGBD…) they are
   built **position-first**. Same algorithm, two orderings.
 - **Positions are picked block by block.** A "block" is one position of a generic branch, one CAGED
-  shape, or one 3-fret window. There are **76** pickable blocks for pentatonic / blues scales and
-  **102** for six-, seven- and eight-note scales. Selected blocks go into a drag-reorderable
-  **practice order slot**; segment order is switchable (by fret by default, or by your pick order).
-  **Position shifts are annotated on the fretboard.**
+  placement, or one 3-fret window. Across the full neck there are **81** pickable blocks for
+  pentatonic / blues, **94** for six-note and **107** for seven- / eight-note scales.
+  The **CAGED column is split by shape** (C / A / G / E / D), and each row lists **every fret
+  position of that shape from low to high** (**10** placements in all with standard tuning), so the
+  low and high position of the same shape can be picked separately. Selected blocks go into a
+  drag-reorderable **practice order slot**; segment order is switchable (by fret by default, or by
+  your pick order). **Position shifts are annotated on the fretboard.**
 - **Practice levels L0–L4** (single notes, 2-note, 3-note, 4-note, nested) plus sequence layout and
   ordering σ. The 3-note level is the strongest: for runs of ≤ 4 notes it yields **8** distinct
   orderings, while the 4-note level yields only 6.
@@ -166,7 +198,7 @@ The button subtitle reads "**ends on string X, fret Y**" — that is the *actual
 | Chord progressions | **456** |
 | Backing tracks | **200** |
 | String groups | **16** |
-| Practice · pickable positions | **76** (pentatonic / blues) / **102** (six-, seven-, eight-note) across 8 fingering systems |
+| Practice · pickable positions | **81** (pentatonic / blues) / **94** (six-note) / **107** (seven-, eight-note) across 8 fingering systems and **19** rows; the CAGED column is split by shape and lists every fret position of each shape low-to-high |
 | Practice · walk modes | **8** |
 | Fretboard score · pagination | at most **18** notes per row, split evenly — the only boundary rule |
 | Chord qualities for note-tapping | **46** (wider than the 23 used by the improvisation lookup: sixth chords, 9th / 11th / 13th, altered dominants, and every no-5 / no-3 form) |
@@ -176,7 +208,7 @@ All counts are produced by the page's own runtime — they are not marketing cop
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **14,966 lines / 992 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **15,764 lines / 1047 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
