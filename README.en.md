@@ -41,12 +41,13 @@ No Node, no build step, no network, no install.
 Everything is embedded in the file — the page issues **no network requests at all**.
 Preferences (key, tuning, theme) go to `localStorage` and never leave your machine.
 
-## The thirteen tabs
+## The fourteen tabs
 
 | Tab | What it does |
 |---|---|
-| 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio |
-| 🧠 **Practice** | Six drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, and **staff sight reading** — the prompt is notated on a staff with key signature and rhythm, and you tap the notes in order on the neck. The staff follows the tuning; see the next section |
+| 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio. Every fretboard diagram carries **TAB + staff** underneath, playable and loopable |
+| 🎵 **Fretboard Practice** | Modular sequence practice: pick a scale → pick **specific position blocks** (multi-select, even across fingering systems, re-orderable) → give each block one of **8 walk modes**. Blocks are walked one at a time, with fretboard and score highlighting in sync |
+| 🎧 **Ear & Sight Practice** | Six drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, and **staff sight reading** — the prompt is notated on a staff with key signature and rhythm, and you tap the notes in order on the neck. The staff follows the tuning |
 | 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
 | 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key |
 | 🧮 **Scale & Harmony** | Seven degrees × five chord-tone extension layers; click any cell to jump to its shape |
@@ -89,6 +90,70 @@ Read it, then tap the matching notes **in order** on the neck.
 - A live answer row records what you tapped, with **↶ undo** and **clear**; note count per question is
   yours to pick (3–12, default 5).
 
+## Fretboard Practice: scale × fingering system × position × walk mode
+
+Losing a scale the moment you change position is usually not a practice problem — it means you never
+drilled it inside **one position**. This tab does one thing only: **practise just the positions you pick.**
+
+| Pick positions (multi-select, even across systems, re-orderable) | Per-block walk mode + score |
+|---|---|
+| ![position picker](screenshots/11-fretboard-practice-positions.png) | ![fretboard practice](screenshots/10-fretboard-practice.png) |
+
+- **The organisation logic switches with the tuning.** For pure-fourths 6-/7-string tunings, standard
+  tuning, and the half-step / whole-step-down families, sequences are built **interval-first,
+  position-second**; for other open tunings (DADGAD, Open G, Open D, FACGCE, DAEAC#E, CGDGBD…) they are
+  built **position-first**. Same algorithm, two orderings.
+- **Positions are picked block by block.** A "block" is one position of a generic branch, one CAGED
+  shape, or one 3-fret window. There are **76** pickable blocks for pentatonic / blues scales and
+  **102** for six-, seven- and eight-note scales. Selected blocks go into a drag-reorderable
+  **practice order slot**; segment order is switchable (by fret by default, or by your pick order).
+  **Position shifts are annotated on the fretboard.**
+- **Practice levels L0–L4** (single notes, 2-note, 3-note, 4-note, nested) plus sequence layout and
+  ordering σ. The 3-note level is the strongest: for runs of ≤ 4 notes it yields **8** distinct
+  orderings, while the 4-note level yields only 6.
+- **Block-sequential walking.** A block is finished before the next one starts. **Every block gets its
+  own button** under the fretboard; you can also **right-click the block on the fretboard** for the
+  eight-mode menu, including "apply to all".
+
+### Eight walk modes — four of them are for joining positions
+
+The four "connection" modes differ in exactly one thing: **where the last note lands**.
+
+| Mode | How it ends | Last note |
+|---|---|---|
+| ↑ ascending-right | Stops at the highest note of the highest string (= the old "ascending") | top right |
+| ↖ ascending-left | Reaches the top, then **turns back along the highest string** | **lowest note of the highest string** — hands off to the lower-position block on the left |
+| ↓ descending-left | Stops at the lowest note of the lowest string (= the old "descending") | bottom left |
+| ↘ descending-right | Reaches the bottom, then **turns back along the lowest string** | **highest note of the lowest string** — hands off to the higher-position block on the right |
+| ↕ up-down / ⇵ down-up | Turns back at the top / the mirror of up-down (down first, then back up) | the apex |
+| ⇅ smart / ↝ follow toolbar | Chosen automatically from the next block's position, or taken from the toolbar | — |
+
+The button subtitle reads "**ends on string X, fret Y**" — that is the *actual* last note of that block's run.
+
+> **Why the "N-notes-per-group" machinery was not enough.** The sequencing layer only knows
+> "one line + one whole-run transform", whereas "the last note must land on a specific string and fret"
+> is a **coordinate-dependent** condition: the ordering σ decides the last note (which need not be the
+> last cell of the window), and the nested level rearranges units wholesale. So the tail is built as
+> **"finish the run, then append a separate connection tail"**, leaving the sequencing layer
+> **completely unchanged**. Across a full enumeration of **13,032 block × mode runs**, connection modes
+> land their last note on the correct physical extreme string **100 %** of the time, with no new leaps.
+
+## Every fretboard diagram carries TAB and staff, playable on a loop
+
+![Fretboard score: TAB and staff right under the diagram](screenshots/12-fretboard-score.png)
+
+- **TAB type follows instrument + tuning**: six-/seven-line TAB for guitar, four-/five-line TAB for bass;
+  the staff kind is dispatched the same way — treble staff for guitar, bass staff (F clef) for bass.
+  **All 19 tunings verified**: TAB line count equals string count and note count matches the run.
+- **Long runs paginate automatically**: at most **18 notes per row**, split **evenly** (rows differ by at
+  most one note). This single rule is the only pagination boundary — independent of layout, instrument
+  and tuning — so nothing ever gets squeezed unreadably small.
+- **Playback and looping**: **▶ play** sounds the written pitches in order at **the BPM shown bottom-left**;
+  **🔁 loop** restarts from the top.
+- **Only the current note lights up**: the fretboard highlights **the single position recorded for that
+  note in the run** (string + fret uniquely identify one spot), with TAB and staff highlighting in sync —
+  rather than lighting every position of that pitch, so you can see which string and fret to press.
+
 ## Data
 
 | Item | Count |
@@ -96,11 +161,14 @@ Read it, then tap the matching notes **in order** on the neck.
 | Scales / arpeggios | **82** across **9** families |
 | Mode colour profiles | **59** |
 | Fingering systems | **10** (3NPS, 4NPS, wide, 3-1-3, 2-1-2, 2-1-2 basic, 2NPS, CAGED, position window, unsegmented). **9** are visible at a time — all **12** scales of the pentatonic / blues family swap 4NPS for the wide form (every scale tone inside one 7-fret position window) |
-| Tunings | **17** (6-string guitar 10, 7-string 5, 4-string bass 1, 5-string bass 1) |
+| Tunings | **19** (6-string guitar 11, 7-string 6, 4-string bass 1, 5-string bass 1) |
 | Chord qualities | **23** |
 | Chord progressions | **456** |
 | Backing tracks | **200** |
 | String groups | **16** |
+| Practice · pickable positions | **76** (pentatonic / blues) / **102** (six-, seven-, eight-note) across 8 fingering systems |
+| Practice · walk modes | **8** |
+| Fretboard score · pagination | at most **18** notes per row, split evenly — the only boundary rule |
 | Chord qualities for note-tapping | **46** (wider than the 23 used by the improvisation lookup: sixth chords, 9th / 11th / 13th, altered dominants, and every no-5 / no-3 form) |
 | Scale readings for note-tapping | **984** (82 scales × 12 tonics; readings whose pitch classes collapse are excluded) |
 
@@ -108,7 +176,7 @@ All counts are produced by the page's own runtime — they are not marketing cop
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **12,439 lines / 833 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **14,966 lines / 992 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
