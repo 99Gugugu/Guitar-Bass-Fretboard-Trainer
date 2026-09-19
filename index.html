@@ -291,6 +291,42 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
 #psDirSel, #psDurSel{width:auto; font-size:12px; padding:4px 8px}
 .psTabsvg .ps-t{fill:var(--text); font-weight:700; font-size:10.5px; font-family:inherit}
 .psTabsvg .ps-n.ps-hi .ps-t{fill:var(--accent)}
+/* ---------- 谱面视窗（第 79 轮；第 80 轮起长宽各自可调，另留一个正方形按钮）
+   指板图在上、谱面在下；谱子进一个**独立的谱面视窗**，自己滚自己的。
+   视窗长宽走 CSS 变量（--psv / --psvh），拖滑块只改变量、**不重绘** ——
+   视窗多大跟谱子怎么排无关（谱子恒铺满内宽，见下）。
+   缩放（--psvz）只在**放大态**（> 100%）是纯变量；铺满态（≤ 100%）改缩放要重排谱子
+   （行宽要跟着顶宽，见 psScoreHTML 的 stretch），但重排只换 #fpBoard 里那一块 .ps ——
+   工具条（含正在拖的滑块）原样不动，拖动才断不了（与位置面板「点一下就弹一下」同源，
+   见 fpReflow）。第 81 轮之前缩放一律走变量，于是缩小时 svg 元素自己只有视窗的 70% 宽、
+   右边整片留白 —— 那就是「宽度必须恒为 100%、缩小改由内容承担」的理由。
+   ⚠ 三个变量挂在 .ps-vw（.ps 元素）上，由 psScoreHTML 内联写出。 */
+.psv-bar{display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  margin:9px 0 7px; padding:7px 10px; border:1px solid var(--border2);
+  border-radius:9px; background:var(--panel2)}
+.psv-t{font-size:12.5px; font-weight:700; color:var(--text)}
+.psv-bar label{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted)}
+.psv-bar input[type=range]{width:98px; accent-color:var(--accent2)}
+/* ⚠ 只限定在 label 里的 b —— 写成 `.psv-bar b` 会连标题的 .psv-t 一起命中
+   （类选择器特异性 0,1,0 输给 0,1,1），标题会掉成 11.5px 的灰字。 */
+.psv-bar label b{color:var(--text2); font-size:11.5px; font-variant-numeric:tabular-nums}
+.psv-sp{flex:1 1 auto}
+/* 视窗本体：长宽**各自独立**，自己滚自己的（默认 520 x 520 = 第 79 轮的方形观感）。
+   ⚠ 高用显式 height 而不是 aspect-ratio —— 后者只能保持比例，做不到「宽高各调各的」。
+   ⚠ 宽度仍是 min(设定值, 100%)：窄窗口里不会把整页顶出横向滚动条。
+   ⚠ 谱子的宽度基数是**本体的内宽**（100%），不是绝对像素 —— 见 psWidthStyle。
+   ⚠ `contain:inline-size` 留着：百分比宽本来就不参与内在尺寸计算，所以现在它不救急，
+     但它把「视窗宽度只由 --psv 与自己所在栏决定」这条**写死**了 —— 以后视窗里若混进
+     任何定宽元素（长按钮行、表格、pre），也不会再把父级 grid 列顶宽。当初正是定宽
+     svg 顶宽：900 px 窗口下 docSW 从 870 涨到 1325，整页横滚 455 px。 */
+.ps-vw .psv-body{width:min(var(--psv,520px),100%); height:var(--psvh,520px); overflow:auto;
+  contain:inline-size;
+  padding:8px 10px; box-sizing:border-box; border:1px solid var(--border2);
+  border-radius:9px; background:var(--panel)}
+/* 视窗里由**外层**统一滚动 —— 每行再各自横滚的话，各行的滚动位置互不同步，
+   一眼看不出「这一拍在这行第几个」 */
+.ps-vw .ps-tab, .ps-vw .ps-staff{overflow:visible}
+.ps-vw .ps-row + .ps-row{margin-top:9px; padding-top:8px}
 /* 五线谱的音符全是**内联 style**，类选择器压不住 —— 高亮必须 !important。
    只有 .ps-n 包起来的那几个元素会被命中（五线 / 小节线不在组里），不会误伤。 */
 .staffsvg .ps-n.ps-hi ellipse, .staffsvg .ps-n.ps-hi circle{fill:var(--accent) !important}
@@ -387,6 +423,9 @@ select.inp:focus,input.inp:focus{border-color:var(--accent2); box-shadow:0 0 0 3
   cursor:pointer; text-align:left}
 .fp-db:hover{border-color:var(--accent2)}
 .fp-db.sel{box-shadow:0 0 0 2px var(--accent)}
+/* 专注模式（第 82 轮）：标出「现在只露这一块」—— 播放时焦点跟着走句走。
+   与右键菜单的 .sel 分开写：那个说的是「菜单正在作用哪一块」。 */
+.fp-db.foc{border-color:var(--accent); outline:2px solid var(--accent); outline-offset:1px}
 .fp-db-n{display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
   width:17px; height:17px; border-radius:5px; color:#fff; font-size:10.5px;
   font-weight:700; font-style:normal}
@@ -1014,7 +1053,9 @@ body{padding-bottom:74px}
             <b>上行右连接</b>收在右上角（最高音弦的最高音）、<b>上行左连接</b>升到顶后
             在最高音弦上折回本弦最低音、收在左上角；<b>下行左连接</b>收在左下角、
             <b>下行右连接</b>到底后在最低音弦上折回本弦最高音、收在右下角。
-            按钮副标上的「收在 X 弦 Y 品」就是这一块走句真正的末音。</div>
+            按钮副标上的「收在 X 弦 Y 品」就是这一块走句真正的末音。
+            <br><b>专注模式</b>（工具条上的勾选框）开着时，指板图上<b>只留下正在走的那一块
+            指型</b>的音、其余音隐掉 —— 一块一块地看，别的位置先不干扰；关掉就恢复全部音。</div>
           <div class="field">
             <label>练习级别</label>
             <div class="seg mini" id="fpLevelSeg">
@@ -1073,6 +1114,8 @@ body{padding-bottom:74px}
           <select class="inp sm" id="fpDirSel" style="width:auto" title="走句方向：上行 / 下行 / 上下行"></select>
           <select class="inp sm" id="fpDurSel" style="width:auto" title="每个音符的时值 —— 与左下角 BPM 一起决定播放速度"></select>
           <label class="chk ps-chk" title="在五线谱每个音符下方标注音名（含八度）"><input type="checkbox" id="fpNamesChk"><span>音名</span></label>
+          <label class="chk ps-chk" title="开启后指板图上**只显示当前把位指型包含的音**，其余音隐掉 —— 播放时跟着走句自动换块；关闭则显示全部音"><input type="checkbox" id="fpFocusChk"><span>专注模式</span></label>
+          <span class="hint" id="fpFocusCap"></span>
           <span class="hint" id="fpStat"></span>
         </div>
         <div class="fp-pos" id="fpPosBar">
@@ -3950,6 +3993,16 @@ function jdNote(sc, rootPc, midi, ref1, sysId){
   const f = jdFramePc(sc, rootPc, sysId);
   return { txt:NUM[((pc - f) % 12 + 12) % 12], dot:dot, in:false };
 }
+/* 实发音高 → 简谱题用的音名（含八度）。**实发**口径 —— 「谱下音名」（it.name）
+   与「你的作答」chip 两处必须走这**同一个**函数。
+   ⚠ 第 82 轮之前作答 chip 走的是 sightWName（记谱音高 = 实发 + 12）——
+     与题目简谱、与谱下音名**整整差一个八度**：照着 chip 对谱就会整整低一个八度地
+     点下去，5 个音全判错还看不出原因（第 82 轮用户截图那一例就是这么来的）。
+     简谱没有谱表八度（见 jdScoreSVG 与出题侧 it.name 的头注），这条链上只能有一个口径：
+     **实发**。 */
+function jdSndName(midi){
+  return nameOf(midi, S.flats) + (Math.floor(midi / 12) - 1);
+}
 /* 六条体系实例（按 JD_SYS 的次序）。
    ⚠ 返回的就是 JD_SYS 的项本身（带 id / gid / cn）—— 面板要拿 id 与 cn 直接渲染，
      不去 GROUPS 里查：mel 两行共用同一个组，查组名分不开它们。 */
@@ -4084,6 +4137,22 @@ function jdScoreSVG(items, o){
             「记谱音名（+12）」—— 简谱本来就没有谱表八度的概念。 */
       if (o.names && c.it.name)
         P.push(t(cx, JD_BASE + 34, SX(c.it.name), 9.5, 'var(--muted)', 400));
+      /* 判定标记（第 82 轮）：与五线谱的 ✓ / ✗ 同一套语义（见 stStaffSVG 的标记行）。
+         ⚠ 提交前 it.ok 是 null —— 这一支不画，输出与第 81 轮**逐字节相同**。
+           第 82 轮之前简谱一个标记都不画，可提示里明写着「谱面红叉」—— 那是句空话：
+           用户答错 5 个音，谱上什么也看不出来，只能整条重来。
+         画法：对 → 绿色小勾落在数字右上角（不遮数字）；错 → 压在数字右半边的红叉
+         （就是「红叉」两个字的意思，左半边数字仍然读得出来）。 */
+      if (c.it.ok === true || c.it.ok === false){
+        P.push(c.it.ok
+          ? t(cx + 10, JD_BASE - 13, '✓', 10.5, 'var(--ok)', 700)
+          : '<line x1="' + stN(cx - 0.5) + '" y1="' + stN(JD_BASE - 12.5) + '" x2="'
+            + stN(cx + 12.5) + '" y2="' + stN(JD_BASE + 0.5) + '" style="stroke:var(--accent);'
+            + 'stroke-width:2.1;stroke-linecap:round"/>'
+            + '<line x1="' + stN(cx - 0.5) + '" y1="' + stN(JD_BASE + 0.5) + '" x2="'
+            + stN(cx + 12.5) + '" y2="' + stN(JD_BASE - 12.5) + '" style="stroke:var(--accent);'
+            + 'stroke-width:2.1;stroke-linecap:round"/>');
+      }
     }
     x += JD_COL;
     if (c.bar)
@@ -4556,6 +4625,23 @@ if (_saved.arpGhostR === undefined) S.arpGhostR = S.arpGhost !== false;
   S.psLoop  = !!S.psLoop;
   if (S.psDir !== 'down' && S.psDir !== 'updown') S.psDir = 'up';
   S.psDur   = ([0.5, 1, 2].indexOf(S.psDur) >= 0) ? S.psDur : 0.5;
+  /* 谱面视窗（第 79 轮）—— **只作用于「指板练习」页**，其它页不读这几个字段。
+     老存档没有它们 → 一律走默认值，界面与结果与第 78 轮逐字节相同。
+     ⚠ fpRowMax 的合法域就是需求给的 21–24；越界或非整数一律落 24。
+     ⚠ fpZoom 是「铺满视窗的几倍」：100% 恰好一行铺满，量程 50–300。 */
+  S.fpRowMax = ([21,22,23,24].indexOf(Math.round(num(S.fpRowMax, 24, 21, 24))) < 0)
+    ? 24 : Math.round(num(S.fpRowMax, 24, 21, 24));
+  S.fpVwOn   = (S.fpVwOn === undefined) ? true : !!S.fpVwOn;
+  S.fpVwSize = Math.round(num(S.fpVwSize, 520, 320, 1000));
+  /* 第 80 轮：视窗高度独立可调。⚠ 缺省值取**归一化后的宽度**，不是硬编码 520 ——
+     老存档只有 fpVwSize 没有 fpVwH，这样升级后仍是正方形，观感与第 79 轮一致。
+     域 260–1000：下限保证视窗里至少看得见两行谱。 */
+  S.fpVwH    = Math.round(num(S.fpVwH, S.fpVwSize, 260, 1000));
+  S.fpZoom   = Math.round(num(S.fpZoom, 100, 50, 300));
+  S.fpFollow = (S.fpFollow === undefined) ? true : !!S.fpFollow;
+  /* 专注模式（第 82 轮）：指板图上**只留正在走的那一个把位指型**的音，其余音隐掉。
+     老存档没有它 → 落 false，界面与结果与第 81 轮逐字节相同。 */
+  S.fpFocus  = (S.fpFocus === undefined) ? false : !!S.fpFocus;
   if (['all','0','1','2','3','4','5','6','hi'].indexOf(S.cnLib) < 0) S.cnLib = 'all';
   S.cnLib    = String(S.cnLib);
   S.cnLibQ   = (typeof S.cnLibQ   === 'string') ? S.cnLibQ   : '';
@@ -5855,6 +5941,26 @@ const PS_MAX_NOTES = 400;        /* 一次最多排多少音（范围开满 / �
      16 / 12 两档，分屏时把一条 18 音的走句拆成 9 + 9，行数凭空翻倍，
      正是「tab 谱普遍过大」的来源。 */
 const PS_MAX_PER_ROW = 18;
+/* 谱面 svg 的宽度样式（第 79 轮抽出）。
+   zoomVar 为真 → 宽度写成 calc(100% * var(--psvz,1))：视窗里的缩放滑块只改这
+   **一个 CSS 变量**，svg 自己跟着变，不必重绘 —— 重绘会把滑块自己换掉，拖动就断在半路。
+   不传 → 逐字节沿用第 59 轮那一串（探索页 / 分屏 / 视奏页走的都是这一支）。
+   ⚠ 基数是**视窗内宽**（100%），不是 W × ST_ZOOM 那个绝对像素。于是
+     「缩放 100%」= 一行正好铺满视窗宽度（乐谱最自然的默认视图），
+     要放大到 200% 以上才会出现横滚。三条理由：
+       ① 24 音一行的自然宽是 1283 px，方形视窗只有 520 px —— 拿绝对像素当 100%，
+          一进场就只看得见三分之一行，非先点一下「适应宽度」才像话；
+       ② 视窗尺寸本身可调（--psv），绝对像素在改过尺寸后立刻又不合身，百分比自动跟着变；
+       ③ 百分比宽度**不掺和内在尺寸计算**，不会把父级 grid 列顶宽（见 CSS 里
+          .psv-body 那条 contain:inline-size 的注释）。
+   ⚠ 同一块谱里各行宽度本就一致（psScoreHTML 第一遍把各行统一到最宽行的 minW），
+     所以按 100% 铺时每一行的「每音像素宽」仍然相同，不会一行大一行小。 */
+function psWidthStyle(W, zoomVar){
+  const px = Math.round(W * ST_ZOOM);
+  return zoomVar
+    ? 'width:calc(100% * var(--psvz,1));max-width:none;height:auto;display:block'
+    : 'width:' + px + 'px;max-width:100%;height:auto;display:block';
+}
 /* 播放态：key = 正在播的那块谱（'u' 叠加视图 / 'b3' 分屏里第 4 块）。
    seqMap 每次重绘时重建 —— 播放取的就是**画出来的那一条**，不是另算一遍。 */
 const PS = { key:null, seq:null, seqMap:{}, i:0, timer:null };
@@ -5929,7 +6035,7 @@ function psTabSVG(list, o){
   const H = Math.ceil(top + (N - 1) * SP + 20);
   const p = [];
   p.push('<svg class="psTabsvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H
-    + '" style="width:' + Math.round(W * ST_ZOOM) + 'px;max-width:100%;height:auto;display:block"'
+    + '" style="' + psWidthStyle(W, o.zoomVar) + '"'
     + ' xmlns="http://www.w3.org/2000/svg">');
   for (let s = 0; s < N; s++){
     p.push('<line x1="2" y1="' + yOf(s) + '" x2="' + W + '" y2="' + yOf(s)
@@ -5961,8 +6067,11 @@ function psSvgW(s){
    均分后各行长度最多差 1，看起来像正常换行的乐谱。
    上下行（2n−1）在这里有个巧合：35 音 → 18 + 17，而顶点正好是第 18 个音 ——
    第一行恰是一整条上行、第二行是一整条下行，换行点正落在乐句的转折上。 */
-function psRowSpans(n){
-  const M = PS_MAX_PER_ROW;
+function psRowSpans(n, M){
+  /* M（第 79 轮）：可选的每行上限。不传 = PS_MAX_PER_ROW，即全局共用那一档的老口径。
+     「指板练习」页传 21–24（见 S.fpRowMax）—— 那一页的谱子进了方形视窗、可以缩放，
+     行宽不再受容器宽窄牵制，所以放得下更多音；其余页仍走 18。 */
+  if (!(M > 0)) M = PS_MAX_PER_ROW;
   if (n <= M) return [n];
   const k = Math.ceil(n / M), base = Math.floor(n / k), rem = n % k;
   const out = [];
@@ -5997,25 +6106,53 @@ function psScoreHTML(bl, bIdx, key, sg, ovr){
        两行若共用一份 `_x`，第二行的 TAB 会整条叠到第一行上去。
      ⚠ data-psi 用**整条走句的全局下标**（psiOff / off），不是行内下标，
        否则播放推进到第二行就找不到该亮的那个音（psHi 按走句下标找）。 */
-  const spans = psRowSpans(seq.length);
-  const stOpt = { sig:kk.sig, tt:4, tb:4, st:spec.staff, names:S.psNames };
+  /* vw（第 79 轮）：方形视窗参数 { size, zoom }。传了才启用 —— 行容、缩放锚点、
+     包裹容器三样一起变；不传时本函数后续每一行都与第 78 轮逐字节相同。 */
+  const vw = (ovr && ovr.view) ? ovr.view : null;
+  const spans = psRowSpans(seq.length, ovr && ovr.rowMax);
+  /* zv：把宽度挂到 CSS 变量上（见 psWidthStyle）。第一遍（量宽）也要带上 ——
+     两遍的 style 必须一字不差，否则第二遍回写的 `_x` 与第一遍量出的 minW 会对不上。 */
+  const zv = !!vw;
+  /* 第 81 轮：视窗里的缩放分两态，差别**只在 --psvz 与 stretch 上**（宽度样式不变）：
+     ≤ 100%（铺满态）--psvz 恒写 1 → svg 恒等于视窗内宽，行宽改由 stretch 顶上去，
+       于是「一行永远铺满视窗、右边不留白」，而且 σ ≥ 1，音符只被排开、不会挤到一起；
+     > 100%（放大态）--psvz = z、stretch 保持 1 → 超宽横滚。放大本来就是「看得更大」，
+       不该为了不出滚动条把音符挤小（那是另一套取舍，见下）。
+     ⚠ 只有 z < 1 时才算 σ：z ≥ 1 时 rowW 已经是自然宽，两遍渲染与第 80 轮逐字节相同。 */
+  const z = (vw && isFinite(vw.zoom) && vw.zoom > 0) ? vw.zoom / 100 : 1;
+  const stOpt = { sig:kk.sig, tt:4, tb:4, st:spec.staff, names:S.psNames, zoomVar:zv };
   /* 第一遍**只量宽**：取各行里最宽的那条当整块的统一画布宽（minW）。
      各行的宽度都不同（末行常常少一个音），而显示尺寸是「按容器等比压」的 ——
      不统一的话同一个容器里每行被压的倍率不一样，符头一行大一行小；
      统一到最宽行之后，各行的音符列还顺便纵向对齐，这是乐谱的标准排法。
      ⚠ 只渲染不包裹（不传 psi），这一遍的 `_x` 会被第二遍按同样规则覆盖，值相同。 */
-  let rowW = 0;
+  let rowW = 0, rowN = 1;                 /* rowN = 最宽那一行的音数 */
   for (let i = 0, o0 = 0; i < spans.length; o0 += spans[i], i++){
-    rowW = Math.max(rowW, psSvgW(stStaffSVG(stAll.slice(o0, o0 + spans[i]), stOpt)));
+    const w = psSvgW(stStaffSVG(stAll.slice(o0, o0 + spans[i]), stOpt));
+    if (w > rowW){ rowW = w; rowN = spans[i]; }
+  }
+  /* 铺满态：把「最宽行的自然宽」顶到 rowW / z —— 元素宽恒为视窗内宽，缩放全落在
+     viewBox 的这一下伸缩上。解式来自「W 对 σ 是线性的」：
+       W(σ) = W(1) + n·step·(σ−1)   →   σ = 1 + rowW·(1/z − 1)/(n·step)
+     随 σ 变的只有每音步进（前缀 / 调号 / 拍号 / 小节线 / 记号都不随它变），所以这一个
+     式子就是精确解，余数只来自 ceil（≤ 1 个单位）。
+     ⚠ minW（各行统一的画布宽）同样要换成顶宽后的值，否则各行被压的倍率不一致、
+       符头会一行大一行小。
+     ⚠ 只用 stStepOf 那一个式子 —— 与 stStaffSVG 里真正乘的是同一个函数。 */
+  let stretch = 1, minW = rowW;
+  if (vw && z < 1){
+    const step = stStepOf(dur);
+    if (step > 0 && rowN > 0) stretch = 1 + rowW * (1 / z - 1) / (rowN * step);
+    minW = Math.ceil(rowW / z);
   }
   let off = 0, rowsHtml = '';
   spans.forEach(len => {
     const sn = stAll.slice(off, off + len);
     const staff = stStaffSVG(sn, { sig:kk.sig, tt:4, tb:4, st:spec.staff,
-      names:S.psNames, psi:key, psiOff:off, minW:rowW });
+      names:S.psNames, psi:key, psiOff:off, minW:minW, zoomVar:zv, stretch:stretch });
     /* TAB 的列坐标由五线谱回写 —— 所以必须先排完五线谱再画 TAB。 */
     const tab = psTabSVG(seq.slice(off, off + len).map((n, i) => ({ s:n.s, f:n.f, _x:sn[i]._x })),
-      { N:N, W:psSvgW(staff), key:key, sg:sg, off:off });
+      { N:N, W:psSvgW(staff), key:key, sg:sg, off:off, zoomVar:zv });
     rowsHtml += '<div class="ps-row"><div class="ps-tab">' + tab + '</div>'
       + '<div class="ps-staff">' + staff + '</div></div>';
     off += len;
@@ -6025,7 +6162,16 @@ function psScoreHTML(bl, bIdx, key, sg, ovr){
   PS.seqMap[key] = seq;
   const playing = (PS.key === key && !!PS.timer);
   const a = seq[0], b = seq[seq.length - 1];
-  return '<div class="ps">'
+  /* 视窗模式：谱腔外包一层 .psv-body（长宽独立、独立滚动，三个变量挂在 .ps-vw 上）。
+     不传 ovr.view 时这一行输出与第 78 轮一字不差。
+     ⚠ vw.h 缺省 520 —— 直接调 psScoreHTML 的老调用方（只给 size/zoom）仍是方形。
+     ⚠ --psvz 只在放大态（> 100%）写 z；铺满态恒写 1 —— 那时的缩放已经烘进 viewBox 的
+        stretch 里，这里再乘一次就成了「缩放的平方」（70% 会显示成 49%）。 */
+  return '<div class="ps' + (vw ? ' ps-vw' : '') + '"'
+    + (vw ? ' style="--psv:' + Math.round(vw.size || 520) + 'px;--psvh:'
+        + Math.round(vw.h || 520) + 'px;--psvz:'
+        + (z > 1 ? stN(z) : 1) + '"' : '')
+    + '>'
     + '<div class="ps-h">'
     + '<span class="ps-tag">' + spec.tab + '</span>'
     + '<span class="ps-tag">' + spec.staffCn + '</span>'
@@ -6036,7 +6182,7 @@ function psScoreHTML(bl, bIdx, key, sg, ovr){
     + '" title="按谱面顺序放一遍（MIDI 音高，速度跟左下角 BPM）">'
     + (playing ? '■ 停止' : '▶ 播放') + '</button>'
     + '</div>'
-    + rowsHtml
+    + (vw ? '<div class="psv-body">' + rowsHtml + '</div>' : rowsHtml)
     + '<div class="ps-tip" title="排序口径：先按弦（从最低音弦到最高音弦），同一根弦上按品升序。'
     + '下行 = 整条倒过来；上下行 = 上行到顶再原路回到最低音。'
     + '一行排不下会自动换行 —— 换行只是排版，接着往下读就是同一条走句。">'
@@ -6093,11 +6239,52 @@ function psHiPosIn(root, s, f, midi){
   hit.forEach(el => el.classList.add('playing'));
   return hit.length;
 }
+/* ---- 谱子跟进（第 79 轮，只在「方形视窗」里生效）----
+   练琴时眼睛在指板图上，谱子得自己跟下去。判据抽成**纯函数**，好直接量：
+   fpFollowDelta / fpFollowDX 返回「视窗该滚多少」，0 = 这个音已经看得见，一动不动。
+
+   纵向 fpFollowDelta：按**整行**判 —— 一行进不全就把这一行顶到视窗顶部。
+     判据是「当前音在不在窗内」，但落点是行首：一行一行地翻，眼睛不用追半行。
+   横向 fpFollowDX：按**当前音**判 —— 只有这个音真的探到边（留 20px 余量）才动，
+     动的幅度是「把它挪回视窗正中」。这样绝大多数拍子上视窗是静止的，
+     隔几拍才挪一次，不会每一拍都晃。
+   ⚠ 横向必须做：缩放 200% 时一行的显示宽是视窗的两倍，光靠纵向跟进，
+     当前音会在视窗外（100% 铺满时两轴都不动，天然没事）。
+   ⚠ 只在 .psv-body 里滚 —— 探索页 / 分屏 / 视奏页没有这个容器，closest 返回 null，
+     整段直接返回，那几页一个像素都不动。 */
+function fpFollowDelta(r){
+  if (r.elTop >= r.bodyTop && r.elBot <= r.bodyBot) return 0;
+  return Math.round(r.rowTop - r.bodyTop) - 4;   /* 把这一行顶到视窗顶部（留 4px 余量） */
+}
+function fpFollowDX(r){
+  if (!(r.bodyW > 8)) return 0;
+  const m = 20;                                   /* 边距：探到这以内就算「要到边了」 */
+  if (r.elLeft >= r.bodyLeft + m && r.elRight <= r.bodyRight - m) return 0;
+  return Math.round((r.elLeft + r.elRight) / 2 - (r.bodyLeft + r.bodyRight) / 2);
+}
+function fpFollowTo(el){
+  if (!S.fpFollow || !el || !el.closest) return;
+  const body = el.closest('.psv-body');
+  if (!body) return;
+  const row = el.closest('.ps-row') || el;
+  const b = body.getBoundingClientRect(), e = el.getBoundingClientRect();
+  const r = row.getBoundingClientRect();
+  const dy = fpFollowDelta({ elTop:e.top, elBot:e.bottom,
+                             bodyTop:b.top, bodyBot:b.bottom, rowTop:r.top });
+  const dx = fpFollowDX({ elLeft:e.left, elRight:e.right,
+                          bodyLeft:b.left, bodyRight:b.right, bodyW:b.width });
+  if (dy) body.scrollTop += dy;
+  if (dx) body.scrollLeft += dx;
+}
 function psHi(i, note){
   const c = psScope(); if (!c || PS.key === null) return;
   psClearHi();
+  /* 第 82 轮：专注模式 —— 焦点要在打 .playing **之前**切过去（见 fpFocusFollow）。
+     只在练习页的走句里判；PS.key 不是 'fp'、或开关没开，这一行立刻返回。 */
+  if (PS.key === 'fp') fpFocusFollow(i);
   const ref = c.querySelectorAll('[data-psi="' + PS.key + '#' + i + '"]');
   ref.forEach(el => el.classList.add('ps-hi'));
+  if (ref[0]) fpFollowTo(ref[0]);      /* 谱子跟进：ref 空（这一帧没画这个音）就跳过 */
   if (!note) return;
   /* 分屏（探索页「把位分屏」）一个容器里装着好几张图 + 好几份谱：
      先在**正在播的那一份**所在的 .fb-piece 里找，找不到才退回整个容器。 */
@@ -9783,6 +9970,11 @@ function jsightHelp(){
     + '点成别的八度算错。\n'
     + '全部点完按「提交答案」；点错了按「撤回上一步」。卡住了可以「▶ 试听题目」，'
     + '或者打开「☐ 显示音名」把音名标在数字下。\n'
+    + '提交后每个音**对错都标在数字上**：<b>绿勾</b> = 点对了，<b>红叉</b> = 这个音不对 —— '
+    + '按「撤回上一步」把错的换掉再提交。\n'
+    + '⚠ <b>简谱按「实发音高」读</b>：数字的高低音点、谱下的音名、以及「你的作答」'
+    + '牌子上写的音名，三者是**同一个八度**（简谱没有谱表八度这件事）。'
+    + '五线谱那条才是「谱面比实发高八度」——别把两套记谱法的八度习惯混起来。\n'
     + '<b>简谱的「1」落在哪个音上，随体系变</b>：自然大调、和声大调以<b>主音</b>为 1；'
     + '和声小调、双和声小调以<b>关系大调的主音</b>为 1（也就是 do 为 1）。'
     + '所以 A 自然小调读 <b>6712345</b>、A 和声小调读 <b>671234#5</b>，两条都是「1 = C」。\n'
@@ -9921,6 +10113,10 @@ const ST_ZOOM = 1.35;
 
 /* 谱位 → y（ds 越大音越高、y 越小） */
 function stY(ds, st){ st = st || STAFF_TREBLE; return ST_TOP + (st.top - ds) * (ST_SP / 2); }
+/* 一个音占的横向步进（viewBox 单位）—— 时值越长占得越宽。
+   ⚠ 第 81 轮从 stStaffSVG 里**提出来**（本行原本在里面）：psScoreHTML 算伸缩系数
+     要用同一个式子，两处各写一份迟早会走散。stStaffSVG 现在调它，输出一字不变。 */
+function stStepOf(d){ return ST_SP * (d >= 4 ? 5.0 : d >= 2 ? 4.6 : d >= 1.5 ? 4.3 : d >= 1 ? 4.0 : 3.6); }
 /* 数值格式化：SVG 里别出现 30.500000000000004 这种尾巴 */
 function stN(v){ return Math.round(v * 100) / 100; }
 /* 升降号字形的宽度（单位 = 高度），高度按 1 归一化 */
@@ -9964,6 +10160,11 @@ function stStaffSVG(notes, o){
   o = o || {};
   const st = o.st || STAFF_TREBLE;       /* 画在哪张谱表上 */
   const sig = o.sig || 0;
+  /* 第 81 轮：stretch = 每音横向步进的倍数（只有指板练习的「铺满态」传，别处一律 1）。
+     ⚠ 只乘**步进** —— 字形 / 符干 / 符尾 / 记号 / 小节线 / 前缀全都不动：音符本身
+       不放大，只是彼此排得开，整行随之变宽（宽度样式见 psWidthStyle 的变量档）。
+       不传时 stretch === 1，本函数输出与第 80 轮逐字节相同。 */
+  const stretch = (o.stretch > 0) ? o.stretch : 1;
   const tt = o.tt || 4, tb = o.tb || 4;
   const per = tt * 2;                       /* 一小节折合多少个八分音符单位 */
   const showNames = !!o.names;
@@ -10027,11 +10228,9 @@ function stStaffSVG(notes, o){
   /* 音符与休止符 */
   const accMem = {};                        /* 本小节里字母 → 已生效的升降数 */
   let meas = 0;                             /* 本小节已走过多长（八分音符单位） */
-  const stepOf = d => ST_SP * (d >= 4 ? 5.0 : d >= 2 ? 4.6 : d >= 1.5 ? 4.3 : d >= 1 ? 4.0 : 3.6);
-
   for (let i = 0; i < notes.length; i++){
     const n = notes[i];
-    const sx = x, step = stepOf(n.dur);
+    const sx = x, step = stStepOf(n.dur) * stretch;
     x += step;
     /* 指型谱要能单独高亮某个音 → 把这一轮画出来的元素整体套进一层 <g data-psi>。
        ⚠ 不传 o.psi 时 gi = gj = -1，一次 splice 都不做 —— 视奏页那两张谱表的渲染因此逐字不变。
@@ -10186,7 +10385,7 @@ function stStaffSVG(notes, o){
           + '" style="stroke:var(--border2);stroke-width:1.15"/>';
   }
   return '<svg class="staffsvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H
-    + '" style="width:' + Math.round(W * ST_ZOOM) + 'px;max-width:100%;height:auto;display:block"'
+    + '" style="' + psWidthStyle(W, o.zoomVar) + '"'
     + ' xmlns="http://www.w3.org/2000/svg">'
     + '<g transform="translate(0,' + stN(-yTop) + ')">'
     + P.join('').replace('__LINES__', lines)
@@ -10712,8 +10911,7 @@ function sightMake(len, v, o){
     const it = { dur:sl.u / 2, ds:w.ds, acc:w.acc, L:w.L, midi:midi,
                  /* 简谱那条的 name 用**实发音名**（nameOf(midi) + 八度）：简谱没有谱表，
                     标一个「比实际发音高八度」的记谱音名反而找不到位置。 */
-                 name: jd ? (nameOf(midi, S.flats) + (Math.floor(midi / 12) - 1))
-                          : sightWName(midi, ky.letters, v.oct) };
+                 name: jd ? jdSndName(midi) : sightWName(midi, ky.letters, v.oct) };
     if (jd) it.jd = jdNote(sc, rootPc, midi, jdR1, sysId);
     items.push(it); notes.push(it);
   });
@@ -11286,9 +11484,13 @@ function trainClick(s, f, pc, midi){
     /* 作答里显示的音名跟谱面标注同一套写法（谱面音名）= 实发 + 声部的记谱八度，
        所以这里必须把声部的 oct 显式传进去，不能靠 sightWritten 的兜底默认值 ——
        今天两种声部恰好都是 +12，兜底掩盖不了错；换个八度口径就露馅了。 */
+    /* ⚠ 简谱那条的 chip 必须走**实发**口径（jdSndName，与题目简谱、谱下音名同源）；
+       五线谱那条仍走记谱口径 —— 谱面本来就高八度记谱，chip 跟着谱面才对得上。
+       两条口径**不能混**：混了就会出现「chip 写着 E4、题目要的是 E3」这种局面。 */
     r.ans.push({ s:s, f:f, pc:pc, midi:midi,
-                 nm:sightWName(midi, r.letters,
-                               (SIGHT_VOICE[r.voice] || SIGHT_VOICE.guitar).oct) });
+                 nm: r.jd ? jdSndName(midi)
+                          : sightWName(midi, r.letters,
+                                       (SIGHT_VOICE[r.voice] || SIGHT_VOICE.guitar).oct) });
     r.hl = midi; r.bad = []; r.tip = null;
     r.notes.forEach(n => { n.ok = null; });   /* 上一轮的判对判错标记作废 */
     playMidi(midi);
@@ -13204,6 +13406,110 @@ function fpEndOf(bl, i, code, eff, sg){
   if (!last) return '';
   return '收在 ' + psPosCn(last, tuning().mid.length);
 }
+/* ---- 谱面视窗的工具条（第 79 轮；第 80 轮加「高」与「正方形」）----
+   ⚠⚠ 三个滑块（缩放 / 视窗宽 / 视窗高）只改 CSS 变量、**绝不重绘**：重绘会把滑块
+     自己换掉，拖动就断在半路（与位置面板那个「点一下就弹一下」同源）。
+     真正需要重绘的只有**每行音数**一项 —— 换行份数真的变了；跟进开关只写 S，
+     下次抬指才生效。
+   整条工具条随 #fpBoard 一起重建，所以控件值一律现取自 S，不必另行同步。
+   「通栏」是给不喜欢视窗框的人留的退路：谱子按原来的通栏排版铺开。 */
+function fpViewBarHTML(){
+  const dis = S.fpVwOn ? '' : ' disabled';
+  const rows = [21,22,23,24].map(v =>
+    '<option value="' + v + '"' + (v === S.fpRowMax ? ' selected' : '') + '>' + v + '</option>').join('');
+  return '<div class="psv-bar" id="fpViewBar">'
+    + '<span class="psv-t">谱面视窗</span>'
+    + '<div class="seg mini" id="fpVwSeg">'
+    + '<button data-v="1"' + (S.fpVwOn ? ' class="on"' : '') + '>视窗</button>'
+    + '<button data-v="0"' + (S.fpVwOn ? '' : ' class="on"') + '>通栏</button></div>'
+    + '<label title="≤ 100%：谱面铺满视窗宽（行宽跟着放宽，右边不留白）；'
+    + '> 100%：整块放大，一行比视窗宽就横向滚">'
+    + '缩放<input type="range" id="fpZoomR" min="50" max="300" step="5" value="'
+    + S.fpZoom + '"' + dis + '><b id="fpZoomV">' + S.fpZoom + '%</b></label>'
+    + '<button class="btn sm" id="fpFitBtn"' + dis
+    + ' title="缩放回到 100% —— 一行正好铺满视窗宽度">适应宽度</button>'
+    + '<label>宽<input type="range" id="fpVwR" min="320" max="1000" step="20" value="'
+    + S.fpVwSize + '"' + dis + '><b id="fpVwV">' + S.fpVwSize + '</b></label>'
+    + '<label>高<input type="range" id="fpVwHR" min="260" max="1000" step="20" value="'
+    + S.fpVwH + '"' + dis + '><b id="fpVwHV">' + S.fpVwH + '</b></label>'
+    + '<button class="btn sm" id="fpVwSqBtn"' + dis
+    + ' title="高 = 宽 —— 一键回到正方形视窗">正方形</button>'
+    + '<label>每行<select class="inp sm" id="fpRowMaxSel" title="谱子每行放几个音（21–24）">'
+    + rows + '</select></label>'
+    + '<span class="psv-sp"></span>'
+    + '<label class="chk ps-chk" title="播放时谱子跟到当前音那一行 —— 眼睛不用离开指板图">'
+    + '<input type="checkbox" id="fpFollowChk"' + (S.fpFollow ? ' checked' : '')
+    + '><span>谱子跟进</span></label>'
+    + '</div>';
+}
+/* 视窗根 = 挂 --psv / --psvh / --psvz 的那一层。每次现取、不缓存 —— #fpBoard 每帧整块重建。 */
+function fpVwRoot(){ return document.querySelector('#fpBoard .ps-vw'); }
+function fpVwVar(k, v){ const el = fpVwRoot(); if (el) el.style.setProperty(k, v); }
+function fpVwTxt(id, t){ const el = $(id); if (el) el.textContent = t; }
+/* 拖滑块的落盘是**防抖**的：input 每动一格都 save() 又吵又没意义。 */
+let _fpVwT = null;
+function fpVwSaveSoon(){
+  if (_fpVwT) clearTimeout(_fpVwT);
+  _fpVwT = setTimeout(() => { _fpVwT = null; save(); }, 400);
+}
+/* 「适应宽度」：一行正好铺满视窗宽度。这就是**缩放 100%**（铺满态的基准，见 psWidthStyle）。
+   第 81 轮起铺满态的宽度是算出来的（stretch 进 viewBox），所以「回到 100%」还得
+   **重排一次谱子** —— 不再是纯变量操作，fpReflow 走的是与重绘完全同一条路径。
+   再往前的老版要量 viewBox、算 avail/bw，还因为把 getAttribute('viewBox') 的**值**
+   拿去套带前缀的正则而永远提前返回（点它没反应）。少一段算数就少一处能错的地方。 */
+function fpFit(){
+  S.fpZoom = 100;
+  fpVwTxt('fpZoomV', '100%');
+  const r = $('fpZoomR'); if (r) r.value = 100;
+  save();
+  fpReflow();
+}
+/* 「正方形」：把高设成当前的宽 —— 第 79 轮的观感一步可达（本来只能是方形）。
+   与滑块走**同一条路径**：只改 CSS 变量，不重绘（重绘会把按钮自己换掉，点了像没反应）。 */
+function fpVwSquare(){
+  S.fpVwH = S.fpVwSize;
+  fpVwVar('--psvh', S.fpVwH + 'px');
+  fpVwTxt('fpVwHV', String(S.fpVwH));
+  const r = $('fpVwHR'); if (r) r.value = S.fpVwH;
+  save();
+}
+/* ---- 缩放的「重排」（第 81 轮）----
+   铺满态的行宽是算出来的（psScoreHTML 的 stretch），所以改缩放必须重画谱子。
+   但**不能整块重绘 #fpBoard** —— 工具条里那个滑块正在被拖，换掉它就断在半路
+   （与位置面板「点一下就弹一下」同源）。正解：只把 #fpBoard 里那一块 .ps 换掉，
+   其余（指板图 / 按钮条 / 工具条）一个节点都不动，事件委托也就不用重绑。
+   输入不必另算：fpRender 已经把它留在 box.__fpSc 上（同一份输入才谈得上一致）。 */
+function fpScoreEl(box){
+  const ks = box.children;
+  for (let i = 0; i < ks.length; i++) if (ks[i].classList.contains('ps')) return ks[i];
+  return null;
+}
+function fpReflow(){
+  const box = $('fpBoard'); if (!box) return;
+  const a = box.__fpSc;
+  const el = fpScoreEl(box);
+  /* 没有可换的谱子（通栏态下 .ps 仍在，只是没视窗；真取不到就整块重绘兜底） */
+  if (!el){ if (a) fpRender(); return; }
+  if (!a || !S.fpVwOn) return;
+  const body = el.querySelector('.psv-body');
+  const sx = body ? body.scrollLeft : 0, sy = body ? body.scrollTop : 0;
+  el.outerHTML = psScoreHTML(a.bl, -1, 'fp', a.sg, { seq:a.moves, force:1, dirDone:1,
+    dirCn:fpDirTag(a.dirs), rowMax:S.fpRowMax,
+    view:{ size:S.fpVwSize, h:S.fpVwH, zoom:S.fpZoom } });
+  const box2 = $('fpBoard'), el2 = box2 ? fpScoreEl(box2) : null;
+  const b2 = el2 ? el2.querySelector('.psv-body') : null;
+  /* 滚动位置原样带回 —— 换的是排版，看的人不该被弹回开头 */
+  if (b2){ b2.scrollLeft = sx; b2.scrollTop = sy; }
+  psBtnPaint();                     /* ▶/■ 的态：重画后按钮是新的（data-psk 认 'fp'） */
+  if (PS.timer && PS.key === 'fp' && PS.seq) psHi(PS.i, PS.seq[PS.i]);
+}
+/* 拖动时每动一格都重画太吵（一次重排 = 整块谱算两遍）—— 90ms 合并一帧。
+   重排放的总是**当时**的 S.fpZoom，所以丢帧只会让画面慢半拍，不会停在旧档位。 */
+let _fpReflowT = null;
+function fpReflowSoon(){
+  if (_fpReflowT) return;
+  _fpReflowT = setTimeout(() => { _fpReflowT = null; fpReflow(); }, 90);
+}
 function fpDirsBarHTML(bl, dirs){
   if (!bl || !bl.list || !bl.list.length) return '';
   const sg = stringGroup();
@@ -13285,6 +13591,7 @@ function fpFillSharedCtl(){
   if (u) u.value = String(psDurNow());
   const n = $('fpNamesChk'); if (n) n.checked = !!S.psNames;
   const lp = $('fpLoopBtn'); if (lp) lp.classList.toggle('on', !!S.psLoop);
+  const fc = $('fpFocusChk'); if (fc) fc.checked = !!S.fpFocus;
 }
 /* 「组织逻辑」卡片：把判据、音程表、生成方式摊开写清楚 */
 function fpAlignBoxPaint(nBlk){
@@ -13509,6 +13816,80 @@ function fpMoves(bl, sg, dirs0){
   return out.slice(0, keep || ends[0] || out.length);
 }
 
+/* ---- 专注模式（第 82 轮）--------------------------------------------------
+   需求：开关打开后，播放到某一把位指型时，指板图上**只留这一块指型包含的音**，
+   其余音隐掉；关掉恢复全部音。
+   实现只加一层「渲染后打类」（与视奏页的 sightPaintSame 同一手法）：
+     · neckSVG **一个字都不改** —— 探索页 / 分屏 / 视奏页 / 和弦查询连这段代码都碰不到，
+       逐字节零回归；
+     · 换把位时只切 .blkhide 类（CSS 里 = opacity 0 + pointer-events:none），
+       **不重画整块** —— 正在跑的播放定时器、谱面高亮、工具条都不受影响。
+   「当前是哪一块」：播放时由走句下标表给出（fpMovesBi），没播放时就是上一次停下的
+   那一块（初值第 1 块）。关掉开关不重置它 —— 来回切开关时视角不跳。 */
+let FP_FOCUS_BI = 0;
+/* 走句每一项属于哪一块 —— fpMoves 按 **块** 逐块串行铺音（bl.list.forEach），
+   所以同一块的音在序列里是连续的一段；用「各块自己的位置集合」贪心往前认领即可。
+   ⚠ 不读 fpMoves 的 ends（它没返回），也不给走句项加字段（老输出逐字段不变）。
+   ⚠ 相邻把位的窗口共用一些品（共用品 = 换把区），单看一个音的位置可以同时属于两块 ——
+     所以只**前进**、不回头，否则焦点会在两块之间来回跳。 */
+function fpMovesBi(bl, seq){
+  const out = [];
+  if (!bl || !bl.list || !bl.list.length || !bl.of || !seq || !seq.length) return out;
+  const sets = bl.list.map((b, i) => {
+    const s = new Set();
+    fpCellsOf(bl, i).forEach(c => s.add(c.s + '_' + c.f));
+    return s;
+  });
+  let bi = 0;
+  for (let i = 0; i < seq.length; i++){
+    const k = seq[i].s + '_' + seq[i].f;
+    if (!sets[bi].has(k)){
+      for (let j = bi + 1; j < sets.length; j++){ if (sets[j].has(k)){ bi = j; break; } }
+    }
+    out.push(bi);
+  }
+  return out;
+}
+/* 工具条上那颗勾选框旁边的小字：现在只看哪一块（关掉开关就空着） */
+function fpFocusCap(bi){
+  const el = $('fpFocusCap'); if (!el) return;
+  const box = FB.fret || $('fpBoard'), bl = box ? box.__blk : null;
+  const b = (S.fpFocus && bl && bl.list) ? bl.list[bi] : null;
+  if (!b){ el.textContent = ''; return; }
+  const sp = b.fw || fpSpan(b) || null;
+  el.textContent = '只看第 ' + (bi + 1) + ' 块' + (b.label ? ' · ' + b.label : '')
+    + (sp ? '（' + fpSpanCn(sp) + ' 品）' : '');
+}
+/* 只留第 bi 块的音：给其余音打 .blkhide。幂等 —— 重绘出来的新节点天生干净，
+   所以「关闭开关 → 恢复全部音」就是重绘一次，不需要反向清理。 */
+function fpFocusPaint(bi){
+  const box = $('fpBoard'); if (!box) return;
+  const bl = box.__blk, svg = box.querySelector('svg');
+  const n = (bl && bl.list) ? bl.list.length : 0;
+  if (!bl || !bl.of || !svg || !n) return;
+  FP_FOCUS_BI = Math.max(0, Math.min(n - 1, bi | 0));
+  const gs = svg.querySelectorAll('g.note');
+  for (let i = 0; i < gs.length; i++){
+    const g = gs[i];
+    const arr = bl.of.get(g.getAttribute('data-s') + '_' + g.getAttribute('data-f'));
+    g.classList.toggle('blkhide', !(arr && arr.indexOf(FP_FOCUS_BI) >= 0));
+  }
+  /* 逐块方向条上同时标出「现在走的是哪一块」（.fp-db 的顺序与 bl.list 一致） */
+  const dbs = document.querySelectorAll('#fpDirBar .fp-db');
+  for (let i = 0; i < dbs.length; i++) dbs[i].classList.toggle('foc', i === FP_FOCUS_BI);
+  fpFocusCap(FP_FOCUS_BI);
+}
+/* 播放推进时的跟随。⚠ 由 psHi 在**打 .playing 之前**调用 ——
+   否则高亮可能落到一个刚被隐掉的音上（.playing 会强制 opacity:1 把它亮出来）。 */
+function fpFocusFollow(i){
+  if (!S.fpFocus) return;
+  const box = FB.fret;
+  if (!box || !box.__fpBi) return;
+  const bi = box.__fpBi[i];
+  if (bi === undefined || bi === FP_FOCUS_BI) return;
+  fpFocusPaint(bi);
+}
+
 /* ---- 渲染 ---- */
 function fpRender(){
   fpBind();
@@ -13601,16 +13982,35 @@ function fpRender(){
      ⚠ ovr.force —— 本页的谱面是核心，不受探索页「指型谱」开关影响。 */
   /* ovr.dirDone —— 方向已经**逐块**在 fpMoves 里摆好了，psScoreHTML 不能再整体翻一次；
      ovr.dirCn 是抬头 / 提示里那截说明（全体一致时与老文案逐字相同）。 */
+  /* 第 79 轮：谱面进视窗 —— 行容 21–24、可缩放、播放时跟行翻页。
+     第 80 轮：视窗长宽**各自独立**可调（size = 宽，h = 高）。
+     rowMax 与 view 两样**只有本页传**；探索页 / 分屏不传 → 老口径逐字节不变。 */
+  const vw = !!S.fpVwOn;
   const score = psScoreHTML(bl, -1, 'fp', sg,
-    { seq:moves, force:1, dirDone:1, dirCn:fpDirTag(dirs) });
+    { seq:moves, force:1, dirDone:1, dirCn:fpDirTag(dirs),
+      rowMax:S.fpRowMax, view: vw ? { size:S.fpVwSize, h:S.fpVwH, zoom:S.fpZoom } : null });
 
   /* 按钮条夹在「图」与「谱」之间 —— 位置就是「指板图下方」。
      每次重绘整条重建，所以按钮上的档位永远与图的走句一致（第 67 轮）。 */
-  box.innerHTML = out.svg + fpDirsBarHTML(bl, dirs) + score;
+  /* 工具条**恒在**（里面有「方形 / 通栏」二档）—— 否则切到通栏就再没入口切回来。 */
+  box.innerHTML = out.svg + fpDirsBarHTML(bl, dirs) + fpViewBarHTML() + score;
   box.__notes = out.notes;
   /* 右键菜单要「哪一块 + 鼠标在哪根弦哪个品」两样东西：块留在容器上，
      画图几何（fretW / gap / x0 / topPad）留在那棵 svg 上。 */
   box.__blk = bl;
+  /* 第 81 轮：缩放要重排谱子（见 fpReflow）→ 把重画那一块要用的输入留一份，
+     免得重排时另算一遍 moves / dirs（同一套纯函数，但**同一份输入**才谈得上一致）。 */
+  box.__fpSc = { bl:bl, sg:sg, dirs:dirs, moves:moves };
+  /* 第 82 轮：专注模式 —— 走句下标 → 块序 的表在这里**一次**算好挂在容器上
+     （psHi 每一拍都要查，不能每拍现算）。关掉开关时清掉表并撤掉小字提示，
+     图上自然就是全部音（新 DOM 没有 .blkhide）。 */
+  if (S.fpFocus){
+    box.__fpBi = fpMovesBi(bl, moves);
+    fpFocusPaint(FP_FOCUS_BI);
+  } else {
+    box.__fpBi = null;
+    fpFocusCap(0);
+  }
   const nv = box.querySelector('svg');
   if (nv && out.geom) nv.__fpGeom = out.geom;
   fpDmPaint();
@@ -13675,6 +14075,10 @@ function fpBind(){
   on('fpDurSel',    () => { S.psDur = +$('fpDurSel').value; save(); fpRender(); });
   const nc = $('fpNamesChk');
   if (nc) nc.addEventListener('change', () => { S.psNames = nc.checked; save(); fpRender(); });
+  /* 专注模式只影响指板图上「画哪些音」—— 走 fpRender 重画一次最省事：
+     关掉时新节点天然没有 .blkhide，等于「恢复显示全部音」（见 fpFocusPaint 头注）。 */
+  const fc = $('fpFocusChk');
+  if (fc) fc.addEventListener('change', () => { S.fpFocus = fc.checked; save(); fpRender(); });
   const lp = $('fpLoopBtn');
   if (lp) lp.addEventListener('click', () => { S.psLoop = !S.psLoop; save(); fpRender(); });
   const pb = $('fpPlayBtn');
@@ -13693,7 +14097,42 @@ function fpBind(){
        ⚠ 按钮每次重绘都是新元素 → 一律委托在这层不重绘的 #fpBoard 上；
          即使这一击顺带重绘过（按钮已脱离文档），dataset 仍读得到，换档照常生效。 */
     const d = (t && t.closest) ? t.closest('.fp-db') : null;
-    if (d) fpDirCycle(d.dataset.pk);
+    if (d) fpDirCycle(d.dataset.pk); return;
+  });
+  if (bx) bx.addEventListener('input', e => {
+    /* 谱面视窗（第 79 轮；第 81 轮改口径）：视窗**长宽**两个滑块只改 CSS 变量、不重绘
+       （视窗多大与谱子怎么排无关）；**缩放**要重排谱子 —— 铺满态的行宽是算出来的，
+       但重排只换 #fpBoard 里那一块 .ps（fpReflowSoon），工具条与滑块原样不动。
+       落盘防抖 400ms —— 拖动过程中只在松手后写一次 localStorage。 */
+    const t = e.target; if (!t || !t.id) return;
+    if (t.id === 'fpZoomR'){
+      S.fpZoom = Math.max(50, Math.min(300, Math.round(+t.value) || 100));
+      fpVwTxt('fpZoomV', S.fpZoom + '%');
+      fpVwSaveSoon();
+      fpReflowSoon();
+    } else if (t.id === 'fpVwR'){
+      S.fpVwSize = Math.max(320, Math.min(1000, Math.round(+t.value) || 520));
+      fpVwVar('--psv', S.fpVwSize + 'px');
+      fpVwTxt('fpVwV', String(S.fpVwSize));
+      fpVwSaveSoon();
+    } else if (t.id === 'fpVwHR'){
+      S.fpVwH = Math.max(260, Math.min(1000, Math.round(+t.value) || 520));
+      fpVwVar('--psvh', S.fpVwH + 'px');
+      fpVwTxt('fpVwHV', String(S.fpVwH));
+      fpVwSaveSoon();
+    }
+  });
+  if (bx) bx.addEventListener('change', e => {
+    const t = e.target; if (!t || !t.id) return;
+    if (t.id === 'fpRowMaxSel'){ S.fpRowMax = Math.round(+t.value) || 24; save(); fpRender(); }
+    else if (t.id === 'fpFollowChk'){ S.fpFollow = !!t.checked; save(); }
+  });
+  if (bx) bx.addEventListener('click', e => {
+    const t = e.target; if (!t || !t.closest) return;
+    if (t.closest('#fpFitBtn')){ fpFit(); return; }
+    if (t.closest('#fpVwSqBtn')){ fpVwSquare(); return; }
+    const sg2 = t.closest('#fpVwSeg button');
+    if (sg2){ S.fpVwOn = sg2.dataset.v === '1'; save(); fpRender(); return; }
   });
 
   /* ---- 位置选择器（第 65 轮）----

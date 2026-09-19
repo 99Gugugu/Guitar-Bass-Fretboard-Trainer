@@ -30,7 +30,7 @@ Preferences (key, tuning, theme) go to `localStorage` and never leave your machi
 | Tab | What it does |
 |---|---|
 | 🎯 **Fretboard Explorer** | Pick scale / key / tuning and highlight it on the neck. Switch between 9 fingering systems, split by position, overlay colour blocks, highlight the scale's characteristic chord arpeggio. Every fretboard diagram carries **TAB + staff** underneath, playable and loopable |
-| 🎵 **Fretboard Practice** | Modular sequence practice: pick a scale → pick **specific position blocks** (multi-select, even across fingering systems, re-orderable) → give each block one of **8 walk modes**. Blocks are walked one at a time, with fretboard and score highlighting in sync |
+| 🎵 **Fretboard Practice** | Modular sequence practice: pick a scale → pick **specific position blocks** (multi-select, even across fingering systems, re-orderable) → give each block one of **8 walk modes**. Blocks are walked one at a time, with fretboard and score highlighting in sync. The score sits in a **viewport of its own**: notes per row adjustable (21–24), viewport width/height and score zoom on sliders, and playback follows the current note |
 | 🎧 **Ear & Sight Practice** | Seven drills: find-the-note, scale fill-in, note name by ear, interval by ear, mode by ear, **staff sight reading** and **numbered-notation (jianpu) sight reading** — same "read it, then tap it in order on the neck", once from a staff with key signature and rhythm (the staff follows the tuning), once from movable-do numbers (6 system entries × 7 sub-scales each = 42) |
 | 📚 **Scale Library** | 82 scales / arpeggios in 9 families, each with interval structure, degrees, characteristic chords and usage notes |
 | 🧩 **CAGED Chords** | The five positions of a chord on the neck, ordered by **actual lowest fret** so the first shape changes with the key. Ships a **capo**: with the capo on fret N the shapes are those of "root minus N semitones", fret numbers are written relative to the capo, and each card also states the frets you actually play |
@@ -101,7 +101,12 @@ order on the neck.
 - Everything else matches staff sight reading: **every spot with that pitch lights up**, **octave is
   judged strictly**, **▶ play the prompt / ☐ show note names** (off by default), **↶ undo / ✅ submit**,
   and a correct answer advances automatically.
-  Note names here are the **sounding** names — jianpu has no written-octave convention.
+  Note names here are the **sounding** names — jianpu has no written-octave convention. The **answer
+  chips** use those same sounding names, so a chip, the octave dots on the score and the note names
+  under it all sit in **one octave**. (The staff-reading chips follow the written pitch instead — a
+  different but equally self-consistent convention; the two must never be mixed.)
+- **After submitting, every note is marked on the score**: a green tick at the top-right of the
+  correct digits, a red cross over the right half of the wrong ones (the left half stays readable).
 
 ## Fretboard Practice: scale × fingering system × position × walk mode
 
@@ -130,6 +135,31 @@ drilled it inside **one position**. This tab does one thing only: **practise jus
 - **Block-sequential walking.** A block is finished before the next one starts. **Every block gets its
   own button** under the fretboard; you can also **right-click the block on the fretboard** for the
   eight-mode menu, including "apply to all".
+- **☑ Focus mode** (off by default): the fretboard shows **only the notes of the block being walked**,
+
+  ![Focus mode: only the block being walked stays on the fretboard](screenshots/13-focus-mode.png)
+  everything else is hidden — one position at a time, no distractions. Focus follows playback, the
+  per-block mode bar under the fretboard outlines the active block, and a caption beside the checkbox
+  reads "only block N · label (frets X–Y)". Turning it off restores every note at once. Toggling it
+  back and forth **does not reset the focus**, and the change is a class toggle rather than a
+  re-render — playback, score highlighting and the toolbar are untouched.
+- **The score lives in a viewport of its own and follows along.**
+  - **Viewport width** (320–1000 px) and **viewport height** (260–1000 px) each get a slider, plus a
+    one-click **Square** button (height = width). **Score zoom** (50–300%) has its own. Width and height
+    only touch a CSS variable — no re-render; zoom re-flows the score (the row width changes with it),
+    but only that one block is rebuilt, so the toolbar and its sliders stay put and dragging stays
+    continuous.
+  - **At or below 100% the score always fills the viewport width** — shrinking splits the work between
+    smaller notes and a wider row, so no blank strip is left on the right. **100% = one row exactly
+    fills the viewport width**, i.e. the default view is a whole row from the start; only **above 100%**
+    does the block magnify and scroll sideways. The "fit width" button snaps zoom back to 100%.
+  - **Notes per row** is set here too: **21–24** (24 by default), split **evenly** so rows differ by at
+    most one note. Other tabs keep paginating at 18 — this dial is local to this tab.
+  - **☑ Score follow** (on by default): the viewport tracks the current note. Vertically it pages by row
+    (a row that does not fully fit is brought to the top); horizontally it only moves when the current
+    note actually reaches an edge, then re-centres it — so the viewport is still for most beats and your
+    eyes can stay on the fretboard.
+  - Prefer the old look? Switch to "**full width**" and the score goes back to a single wide block.
 
 ### Eight walk modes — four of them are for joining positions
 
@@ -163,7 +193,8 @@ The button subtitle reads "**ends on string X, fret Y**" — that is the *actual
   **All 19 tunings verified**: TAB line count equals string count and note count matches the run.
 - **Long runs paginate automatically**: at most **18 notes per row**, split **evenly** (rows differ by at
   most one note). This single rule is the only pagination boundary — independent of layout, instrument
-  and tuning — so nothing ever gets squeezed unreadably small.
+  and tuning — so nothing ever gets squeezed unreadably small. (The Fretboard Practice tab puts its score
+  in a viewport of its own and lets that bound move between 21 and 24.)
 - **Playback and looping**: **▶ play** sounds the written pitches in order at **the BPM shown bottom-left**;
   **🔁 loop** restarts from the top.
 - **Only the current note lights up**: the fretboard highlights **the single position recorded for that
@@ -185,7 +216,9 @@ The button subtitle reads "**ends on string X, fret Y**" — that is the *actual
 | Voicing · schemes | Up to **3** solutions in mode one (one per low / mid / high register); up to **4** in mode two (the most-common fingering, plus one per register). Capo spans frets **0–9** |
 | Practice · pickable positions | **81** (pentatonic / blues) / **94** (six-note) / **107** (seven-, eight-note) across 8 fingering systems and **19** rows; the CAGED column is split by shape and lists every fret position of each shape low-to-high |
 | Practice · walk modes | **8** |
-| Fretboard score · pagination | at most **18** notes per row, split evenly — the only boundary rule |
+| Practice · focus mode | When on, only the **1** block being walked stays on the fretboard and every other note is hidden (measured on 0–24 frets / standard tuning / 3NPS / C Ionian: 7 blocks, 150 positions → **18** kept, **132** hidden) — off by default |
+| Fretboard score · pagination | at most **18** notes per row, split evenly — the only boundary rule (the Fretboard Practice tab, whose score sits in a viewport of its own, adjusts this between **21** and **24**) |
+| Practice · score viewport | viewport width **320–1000** px, height **260–1000** px (520 × 520 by default, width and height independent); zoom **50–300%** (at or below 100% the row always fills the viewport width, 100% = one row exactly fills it; above 100% the block magnifies and scrolls sideways); **21–24** notes per row (24 by default); score follow on by default |
 | Chord qualities for note-tapping | **46** (wider than the 23 used by the improvisation lookup: sixth chords, 9th / 11th / 13th, altered dominants, and every no-5 / no-3 form) |
 | Scale readings for note-tapping | **984** (82 scales × 12 tonics; readings whose pitch classes collapse are excluded) |
 
@@ -193,7 +226,7 @@ All counts are produced by the page's own runtime — they are not marketing cop
 
 ## Engineering notes
 
-- **Single file.** HTML + CSS + JS in one `index.html`, **15,877 lines / 1055 KB**. No bundler, no dependency, no CDN.
+- **Single file.** HTML + CSS + JS in one `index.html`, **16,316 lines / 1086 KB**. No bundler, no dependency, no CDN.
 - **Zero external requests.** No `<link>`, no `fetch`, no `XMLHttpRequest`, no dynamic `import()`.
   The only URL in the file is the SVG namespace identifier, which performs no network access.
 - **Sound is synthesised, not sampled.** Web Audio triangle + sawtooth oscillators. The repository
