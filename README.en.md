@@ -4,29 +4,13 @@
 > Scale systems, fingering patterns, CAGED, arpeggios, chord progressions, voice leading and
 > improvisation material — all inside one HTML file.
 
+Try it online: https://99gugugu.github.io/Guitar-Bass-Fretboard-Trainer/
+
 ![Fretboard Explorer · C major × CAGED five shapes](screenshots/01-fretboard-explorer.png)
 
 *The UI is in Simplified Chinese. This page is a summary for English readers.*
 
 ---
-
-## Why this exists
-
-Three things that most method books and practice apps handle poorly:
-
-1. **You know a scale, but lose it the moment you change position.** Usually not a practice problem —
-   a *position* is a **vertical** concept: a shape laid out string-by-string from a starting fret,
-   not "a horizontal slice of the neck".
-2. **You know a scale but not what it sits on.** Scales and harmony drift apart.
-3. **Nobody tells you where the hand goes between two adjacent chords** in a progression.
-
-This tool merges all three onto one fretboard:
-
-```
-pick a scale → see how it blocks up in 9 fingering systems → see its characteristic chords & arpeggios
-             → compute the "minimum hand travel" voicings across a real progression
-             → get the improvisation material available in that very position
-```
 
 ## Quick start
 
@@ -35,7 +19,7 @@ No Node, no build step, no network, no install.
 | Way | Steps |
 |---|---|
 | **Local** (recommended) | Download `index.html` and double-click it. Works offline. |
-| **Online** | Open the GitHub Pages link (see the About section). |
+| **Online** | Open the link at the top of this page — nothing to install. |
 | **Clone** | `git clone <this repo>` and open `index.html`. |
 
 Everything is embedded in the file — the page issues **no network requests at all**.
